@@ -25,7 +25,7 @@ import java.util.Random;
  *
  * @author The Turing Autonoma
  */
-public class Striker implements ControllerPlayer {
+public class Striker extends Player {
     private double        distBall    = 1000;
     private double        dirBall     = 0;
     private double        dirOwnGoal = 0;

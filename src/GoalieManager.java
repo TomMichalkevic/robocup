@@ -25,7 +25,7 @@ import java.util.Random;
  *
  * @author Atan
  */
-public class GoalieManager implements ControllerPlayer {
+public class GoalieManager extends Player {
     private double        distBall    = 1000;
     private double        dirBall     = 0;
     private double        dirOwnGoal = 0;

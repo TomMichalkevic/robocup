@@ -2,7 +2,6 @@
 //~--- non-JDK imports --------------------------------------------------------
 
 import com.github.robocup_atan.atan.model.ActionsPlayer;
-import com.github.robocup_atan.atan.model.ControllerPlayer;
 import com.github.robocup_atan.atan.model.enums.Errors;
 import com.github.robocup_atan.atan.model.enums.Flag;
 import com.github.robocup_atan.atan.model.enums.Line;
@@ -25,7 +24,7 @@ import java.util.Random;
  *
  * @author The Turing Autonoma
  */
-public class Defender implements ControllerPlayer {
+public class Defender extends Player {
     private double        distBall    = 1000;
     private double        dirBall     = 0;
     private double        dirOwnGoal = 0;
