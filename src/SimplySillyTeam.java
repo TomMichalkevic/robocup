@@ -27,15 +27,20 @@ public class SimplySillyTeam extends AbstractTeam {
     /**
      * {@inheritDoc}
      *
-     * The first controller of the team is silly the others are simple.
+     * The first controller of the team is the goalie and the others are players (11 is for the captain).
      */
     @Override
     public ControllerPlayer getNewControllerPlayer(int number) {
-        if (number == 0) {
-            return new Silly();
-        } else {
+        if (number == 0)
+            return new GoalieManager();
+        else if (number > 0 && number <= 5)
+            return new Defender();
+        else if (number > 5 && number <= 9)
+            return new Midfielder();
+        else if (number > 9 && number <= 11)
+            return new Striker();
+        else
             return new Simple();
-        }
     }
 
     /**
