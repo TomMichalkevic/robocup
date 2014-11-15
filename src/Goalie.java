@@ -1,6 +1,7 @@
 //~--- non-JDK imports --------------------------------------------------------
 
 import com.github.robocup_atan.atan.model.ActionsPlayer;
+import com.github.robocup_atan.atan.model.ControllerPlayer;
 import com.github.robocup_atan.atan.model.enums.Errors;
 import com.github.robocup_atan.atan.model.enums.Flag;
 import com.github.robocup_atan.atan.model.enums.Line;
@@ -19,16 +20,17 @@ import java.util.Random;
 
 
 /**
- * <p>Defender class.</p>
+ * <p>Silly class.</p>
  *
- * @author The Turing Autonoma
+ * @author Atan
  */
-public class Defender extends Player {
+public class Goalie extends Player {
 
-    public Defender() {
+    public Goalie() {
         super();
-        playerType = "Defender";
+        playerType = "Goalie";
     }
+
     /** {@inheritDoc} */
     @Override
     public void preInfo() {

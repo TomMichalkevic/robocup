@@ -1,4 +1,3 @@
-
 //~--- non-JDK imports --------------------------------------------------------
 
 import com.github.robocup_atan.atan.model.AbstractTeam;
@@ -28,16 +27,26 @@ public class SimplySillyTeam extends AbstractTeam {
      * {@inheritDoc}
      *
      * The first controller of the team is the goalie and the others are players (11 is for the captain).
+     * Player numbers are 1-11 but number is 0-10 so we add one to correct for this.
+     * We define constants in Player class to make code that differentiates between players clearer.
      */
     @Override
     public ControllerPlayer getNewControllerPlayer(int number) {
-        if (number == 0)
-            return new GoalieManager();
-        else if (number > 0 && number <= 5)
+        number++;
+        if (number == Player.GOALIE)
+            return new Goalie();
+        else if (number == Player.LEFT_BACK ||
+                number == Player.CENTER_LEFT_BACK ||
+                number == Player.CENTER_RIGHT_BACK ||
+                number == Player.RIGHT_BACK )
             return new Defender();
-        else if (number > 5 && number <= 9)
+        else if (number == Player.LEFT_WING ||
+                number == Player.CENTER_LEFT_MIDFIELD ||
+                number == Player.CENTER_RIGHT_MIDFIELD ||
+                number == Player.RIGHT_WING )
             return new Midfielder();
-        else if (number > 9 && number <= 11)
+        else if (number == Player.CENTER_LEFT_FORWARD ||
+                number == Player.CENTER_RIGHT_FORWARD )
             return new Striker();
         else
             return new Simple();
