@@ -27,18 +27,26 @@ public abstract class Player implements ControllerPlayer {
     public static final int CENTER_RIGHT_FORWARD = 11;
 
     /**
-     * Aggression defines the teams overall player style. If the team is losing agression increases and if they are
+     * Aggression defines the teams overall player style. If the team is losing aggression increases and if they are
      * winning it decreases. Aggression can be read as attack risk.
+     *
+     * Because we are using two sets of these players we need an aggression factor for each team.
      */
-    private static int aggression = 50;
+    private static int aggressionEast = 50;
+    private static int aggressionWest = 50;
 
 
-    public static int getAggression() {
-        return aggression;
+    public int getAggression() {
+
+        return this.getPlayer().isTeamEast() ? Player.aggressionEast : Player.aggressionWest;
     }
 
-    public static void setAggression(int aggression) {
-        Player.aggression = aggression;
+    public void setAggression(int aggression) {
+        if (this.getPlayer().isTeamEast()) {
+            Player.aggressionEast = aggression;
+        }else {
+            Player.aggressionWest = aggression;
+        }
     }
 
 
