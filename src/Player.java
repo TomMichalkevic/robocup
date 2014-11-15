@@ -16,9 +16,17 @@ public abstract class Player implements ControllerPlayer {
     /**
      * Define a constant for each player position for readability.
      */
-    public static final int GOALIE = 1, LEFT_BACK = 2, CENTER_LEFT_BACK = 3, CENTER_RIGHT_BACK = 4, RIGHT_BACK = 5,
-            LEFT_WING = 6, CENTER_LEFT_MIDFIELD = 7, CENTER_RIGHT_MIDFIELD = 8, RIGHT_WING = 9,
-            CENTER_LEFT_FORWARD = 10, CENTER_RIGHT_FORWARD = 11;
+    public static final int GOALIE = 1,
+            LEFT_BACK = 2,
+            CENTER_LEFT_BACK = 3,
+            CENTER_RIGHT_BACK = 4,
+            RIGHT_BACK = 5,
+            LEFT_WING = 6,
+            CENTER_LEFT_MIDFIELD = 7,
+            CENTER_RIGHT_MIDFIELD = 8,
+            RIGHT_WING = 9,
+            CENTER_LEFT_FORWARD = 10,
+            CENTER_RIGHT_FORWARD = 11;
 
     /**
      * Aggression defines the teams overall player style. If the team is losing aggression increases and if they are
@@ -26,28 +34,38 @@ public abstract class Player implements ControllerPlayer {
      *
      * Because we are using two sets of these players we need an aggression factor for each team.
      */
-    private static int aggressionEast = 50,  aggressionWest = 50;
+    private static int aggressionEast = 50,
+            aggressionWest = 50;
 
 
 
-    protected double distanceToBall = 1000, directionToBall = 0, directionOwnGoal = 0, distanceGoal = -1.0;
-    protected boolean canSeeGoal = false, canSeeGoalLeft = false, canSeeGoalRight = false, canSeeFieldEnd = false,
-            alreadySeeingGoal = false, canSeePenalty = false;
+    protected double distanceToBall = 1000,
+            directionToBall = 0,
+            directionOwnGoal = 0,
+            distanceGoal = -1.0,
+            directionMultiplier = 1.0,
+            goalTurn;
+
+    protected boolean canSeeGoal = false,
+            canSeeGoalLeft = false,
+            canSeeGoalRight = false,
+            canSeeFieldEnd = false,
+            alreadySeeingGoal = false,
+            canSeePenalty = false,
+            needsToRetreat = false;
 
     protected ActionsPlayer player;
-    protected Random  random        = null;
-    protected static int count         = 0;
-    protected double     dirMultiplier = 1.0;
-    protected double     goalTurn;
-    protected boolean 	  needsToRetreat = false;
+    protected Random random        = null;
+    protected static int count = 0;
     protected String playerType = "";
 
-    public int getAggression() {
-
+    public int getAggression()
+    {
         return this.getPlayer().isTeamEast() ? Player.aggressionEast : Player.aggressionWest;
     }
 
-    public void setAggression(int aggression) {
+    public void setAggression(int aggression)
+    {
         if (this.getPlayer().isTeamEast()) {
             Player.aggressionEast = aggression;
         }else {
@@ -55,7 +73,8 @@ public abstract class Player implements ControllerPlayer {
         }
     }
 
-    public Player() {
+    public Player()
+    {
         random = new Random(System.currentTimeMillis() + count);
         count++;
     }

@@ -1,23 +1,9 @@
 
 //~--- non-JDK imports --------------------------------------------------------
 
-import com.github.robocup_atan.atan.model.ActionsPlayer;
-import com.github.robocup_atan.atan.model.ControllerPlayer;
-import com.github.robocup_atan.atan.model.enums.Errors;
 import com.github.robocup_atan.atan.model.enums.Flag;
-import com.github.robocup_atan.atan.model.enums.Line;
-import com.github.robocup_atan.atan.model.enums.Ok;
-import com.github.robocup_atan.atan.model.enums.PlayMode;
-import com.github.robocup_atan.atan.model.enums.RefereeMessage;
-import com.github.robocup_atan.atan.model.enums.ServerParams;
-import com.github.robocup_atan.atan.model.enums.ViewAngle;
-import com.github.robocup_atan.atan.model.enums.ViewQuality;
-import com.github.robocup_atan.atan.model.enums.Warning;
 
 //~--- JDK imports ------------------------------------------------------------
-
-import java.util.HashMap;
-import java.util.Random;
 
 
 /**
@@ -95,7 +81,7 @@ public class Goalie extends Player {
                     getPlayer().dash(randomDashValueSlow());
                 }
                 else
-                    getPlayer().turn(25 * dirMultiplier);
+                    getPlayer().turn(25 * directionMultiplier);
             }
             else
             {
@@ -156,7 +142,7 @@ public class Goalie extends Player {
                                    double bodyFacingDirection, double headFacingDirection)
     {
         if(!alreadySeeingGoal)
-            dirMultiplier *= -1.0;
+            directionMultiplier *= -1.0;
 
         if(flag.compareTo(Flag.CENTER) == 0)
         {
