@@ -179,14 +179,6 @@ public class Defender extends Player {
 
     /** {@inheritDoc} */
     @Override
-    public void infoHearPlayMode(PlayMode playMode)
-    {
-        if (playMode == PlayMode.BEFORE_KICK_OFF)
-            getPlayer().move(-40, 0);
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public void infoHearPlayer(double direction, String string) {}
 
     /** {@inheritDoc} */
