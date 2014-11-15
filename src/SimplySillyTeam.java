@@ -34,23 +34,24 @@ public class SimplySillyTeam extends AbstractTeam {
     @Override
     public ControllerPlayer getNewControllerPlayer(int number) {
         number++;
-        if (number == Player.GOALIE)
+        if (number == Player.GOALIE) {
             return new Goalie();
-        else if (number == Player.LEFT_BACK ||
+        } else if (number == Player.LEFT_BACK ||
                 number == Player.CENTER_LEFT_BACK ||
                 number == Player.CENTER_RIGHT_BACK ||
-                number == Player.RIGHT_BACK )
+                number == Player.RIGHT_BACK ) {
             return new Defender();
-        else if (number == Player.LEFT_WING ||
+        } else if (number == Player.LEFT_WING ||
                 number == Player.CENTER_LEFT_MIDFIELD ||
                 number == Player.CENTER_RIGHT_MIDFIELD ||
-                number == Player.RIGHT_WING )
+                number == Player.RIGHT_WING ) {
             return new Midfielder();
-        else if (number == Player.CENTER_LEFT_FORWARD ||
-                 number == Player.CENTER_RIGHT_FORWARD )
+        }else if (number == Player.CENTER_LEFT_FORWARD ||
+                  number == Player.CENTER_RIGHT_FORWARD) {
             return new Striker();
-        else
+        } else {
             return new Simple();
+        }
     }
 
     /**
