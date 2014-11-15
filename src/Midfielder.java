@@ -2,7 +2,6 @@
 //~--- non-JDK imports --------------------------------------------------------
 
 import com.github.robocup_atan.atan.model.ActionsPlayer;
-import com.github.robocup_atan.atan.model.ControllerPlayer;
 import com.github.robocup_atan.atan.model.enums.Errors;
 import com.github.robocup_atan.atan.model.enums.Flag;
 import com.github.robocup_atan.atan.model.enums.Line;
@@ -178,13 +177,6 @@ public class Midfielder extends Player {
     @Override
     public void infoHearReferee(RefereeMessage refereeMessage) {}
 
-    /** {@inheritDoc} */
-    @Override
-    public void infoHearPlayMode(PlayMode playMode)
-    {
-        if (playMode == PlayMode.BEFORE_KICK_OFF)
-            getPlayer().move(-50, 0);
-    }
 
     /** {@inheritDoc} */
     @Override

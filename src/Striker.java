@@ -178,13 +178,6 @@ public class Striker extends Player {
     @Override
     public void infoHearReferee(RefereeMessage refereeMessage) {}
 
-    /** {@inheritDoc} */
-    @Override
-    public void infoHearPlayMode(PlayMode playMode)
-    {
-        if (playMode == PlayMode.BEFORE_KICK_OFF)
-            getPlayer().move(-50, 0);
-    }
 
     /** {@inheritDoc} */
     @Override

@@ -29,37 +29,37 @@ public class Coach implements ControllerCoach {
     /** {@inheritDoc} */
     @Override
     public void infoHearError(Errors error) {
-        log.error(error);
+        //log.error(error);
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoHearOk(Ok ok) {
-        log.info(ok);
+        //log.info(ok);
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoHearPlayMode(PlayMode playMode) {
-        log.info(playMode);
+        //log.info(playMode);
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoHearPlayer(double direction, String message) {
-        log.info(message + "from " + direction);
+        //log.info(message + "from " + direction);
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoHearReferee(RefereeMessage refereeMessage) {
-        log.info(refereeMessage);
+        //log.info(refereeMessage);
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoHearWarning(Warning warning) {
-        log.warn(warning);
+        //log.warn(warning);
     }
 
     /** {@inheritDoc} */
@@ -67,7 +67,7 @@ public class Coach implements ControllerCoach {
     public void infoPlayerType(int id, double playerSpeedMax, double staminaIncMax, double playerDecay,
                                double inertiaMoment, double dashPowerRate, double playerSize, double kickableMargin,
                                double kickRand, double extraStamina, double effortMax, double effortMin) {
-        log.info("player type");
+        //log.info("player type");
     }
 
     /** {@inheritDoc} */
@@ -81,46 +81,46 @@ public class Coach implements ControllerCoach {
                                 double newStaminaIncMaxDeltaFactor, double playerDecayDeltaMax,
                                 double playerDecayDeltaMin, double playerTypes, double ptMax, double randomSeed,
                                 double staminaIncMaxDeltaFactor, double subsMax) {
-        log.info("player param");
+        //log.info("player param");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoCPTOther(int unum) {
-        log.info("change player type other");
+        //log.info("change player type other");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoCPTOwn(int unum, int type) {
-        log.info("change player type own");
+        //log.info("change player type own");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoServerParam(HashMap<ServerParams, Object> info) {
-        log.info("server param");
+        //log.info("server param");
         coach.teamGraphic(new XPMImageAtanLogo());
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoSeeBall(double x, double y, double deltaX, double deltaY) {
-        log.info("see ball");
+        //log.info("see ball");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoSeePlayerOther(int number, boolean goalie, double x, double y, double deltaX, double deltaY,
                                    double bodyAngle, double neckAngle) {
-        log.info("see player other");
+        //log.info("see player other");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoSeePlayerOwn(int number, boolean goalie, double x, double y, double deltaX, double deltaY,
                                  double bodyAngle, double neckAngle) {
-        log.info("see player own");
+        //log.info("see player own");
     }
 
     /** {@inheritDoc} */
@@ -138,18 +138,18 @@ public class Coach implements ControllerCoach {
     /** {@inheritDoc} */
     @Override
     public void infoSeeGoalOther(double x, double y) {
-        log.info("see goal other");
+        //log.info("see goal other");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoSeeGoalOwn(double x, double y) {
-        log.info("see goal own");
+        //log.info("see goal own");
     }
 
     /** {@inheritDoc} */
     @Override
     public void infoHearTeamNames(String teamWest, String teamEast) {
-        log.info("Team names" + teamWest + " " + teamEast);
+        //log.info("Team names" + teamWest + " " + teamEast);
     }
 }
