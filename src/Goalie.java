@@ -2,10 +2,12 @@
 //~--- non-JDK imports --------------------------------------------------------
 
 import com.github.robocup_atan.atan.model.ActionsPlayer;
+import com.github.robocup_atan.atan.model.ControllerPlayer;
 import com.github.robocup_atan.atan.model.enums.Errors;
 import com.github.robocup_atan.atan.model.enums.Flag;
 import com.github.robocup_atan.atan.model.enums.Line;
 import com.github.robocup_atan.atan.model.enums.Ok;
+import com.github.robocup_atan.atan.model.enums.PlayMode;
 import com.github.robocup_atan.atan.model.enums.RefereeMessage;
 import com.github.robocup_atan.atan.model.enums.ServerParams;
 import com.github.robocup_atan.atan.model.enums.ViewAngle;
@@ -19,16 +21,15 @@ import java.util.Random;
 
 
 /**
- * <p>Defender class.</p>
+ * <p>Silly class.</p>
  *
- * @author The Turing Autonoma
+ * @author Atan
  */
-public class Striker extends Player {
+public class Goalie extends Player {
 
-
-    public Striker() {
+    public Goalie() {
         super();
-        playerType = "Striker";
+        playerType = "Goalie";
     }
 
     /** {@inheritDoc} */
@@ -177,6 +178,4 @@ public class Striker extends Player {
             goalTurn = -90;
         }
     }
-
-
 }

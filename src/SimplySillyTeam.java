@@ -35,7 +35,7 @@ public class SimplySillyTeam extends AbstractTeam {
     public ControllerPlayer getNewControllerPlayer(int number) {
         number++;
         if (number == Player.GOALIE)
-            return new GoalieManager();
+            return new Goalie();
         else if (number == Player.LEFT_BACK ||
                 number == Player.CENTER_LEFT_BACK ||
                 number == Player.CENTER_RIGHT_BACK ||
