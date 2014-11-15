@@ -5,6 +5,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+
 /**
  * Created by cmitchelmore on 13/11/14.
  */
@@ -24,6 +25,21 @@ public abstract class Player implements ControllerPlayer {
     public static final int RIGHT_WING = 9;
     public static final int CENTER_LEFT_FORWARD = 10;
     public static final int CENTER_RIGHT_FORWARD = 11;
+
+    /**
+     * Aggression defines the teams overall player style. If the team is losing agression increases and if they are
+     * winning it decreases. Aggression can be read as attack risk.
+     */
+    private static int aggression = 50;
+
+
+    public static int getAggression() {
+        return aggression;
+    }
+
+    public static void setAggression(int aggression) {
+        Player.aggression = aggression;
+    }
 
 
     /** {@inheritDoc} */
