@@ -72,12 +72,14 @@ public abstract class Player implements ControllerPlayer {
             alreadySeeingOtherGoal = false,
             canSeeOtherGoal = false,
             canSeeOwnPenalty = false,
-            needsToRetreat = false;
+            needsToRetreat = false,
+            haveSeenSomeMarker = false;
 
     protected ActionsPlayer player;
     protected Random random        = null;
     protected static int count = 0, ballPositionOffset = 0;
     protected String playerType = "";
+    private static PlayerPositionModel playerPositionModel = null;
 
     public int getAggression()
     {
@@ -97,6 +99,9 @@ public abstract class Player implements ControllerPlayer {
     public Player()
     {
         random = new Random(System.currentTimeMillis() + count);
+        if (playerPositionModel == null) {
+            playerPositionModel = new PlayerPositionModel();
+        }
         count++;
     }
 
@@ -312,11 +317,13 @@ public abstract class Player implements ControllerPlayer {
     {
         player = p;
     }
-
     /** {@inheritDoc} */
     @Override
-    public void infoSeeLine(Line line, double distance, double direction, double distChange, double dirChange,
-                            double bodyFacingDirection, double headFacingDirection) {}
+    public String getType()
+    {
+        return playerType;
+    }
+
 
     /** {@inheritDoc} */
     @Override
@@ -325,14 +332,9 @@ public abstract class Player implements ControllerPlayer {
     {
         distanceToBall = distance;
         directionToBall = direction;
+        playerPositionModel.addBall(this, distance, direction);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public String getType()
-    {
-        return playerType;
-    }
 
     /** {@inheritDoc} */
     @Override
@@ -395,17 +397,6 @@ public abstract class Player implements ControllerPlayer {
 
     /** {@inheritDoc} */
     @Override
-    public void infoSeeFlagRight(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                 double bodyFacingDirection, double headFacingDirection) {}
-
-    /** {@inheritDoc} */
-    @Override
-    public void infoSeeFlagLeft(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                double bodyFacingDirection, double headFacingDirection) {}
-
-
-    /** {@inheritDoc} */
-    @Override
     public void infoHearReferee(RefereeMessage refereeMessage) {}
 
 
@@ -436,6 +427,7 @@ public abstract class Player implements ControllerPlayer {
 
     }
 
+
     /** {@inheritDoc} */
     @Override
     public void infoSeePlayerOther(int number, boolean goalie, double distance, double direction, double distChange,
@@ -446,6 +438,7 @@ public abstract class Player implements ControllerPlayer {
             distanceClosestForwardOtherPlayer = distance;
             directionClosestForwardOtherPlayer = direction;
         }
+        playerPositionModel.addPlayer(this, false, number, distance, direction);
     }
 
     /** {@inheritDoc} */
@@ -458,6 +451,7 @@ public abstract class Player implements ControllerPlayer {
             distanceClosestForwardOwnPlayer = distance;
             directionClosestForwardOwnPlayer = direction;
         }
+        playerPositionModel.addPlayer(this, true, number, distance, direction);
     }
 
     /** {@inheritDoc} */
@@ -495,18 +489,33 @@ public abstract class Player implements ControllerPlayer {
 
     /** {@inheritDoc} */
     @Override
+    public void infoSeeLine(Line line, double distance, double direction, double distChange, double dirChange,
+                            double bodyFacingDirection, double headFacingDirection) {}
+
+
+    /** {@inheritDoc} */
+    @Override
     public void infoSeeFlagOther(Flag flag, double distance, double direction, double distChange, double dirChange,
                                  double bodyFacingDirection, double headFacingDirection) {}
 
     /** {@inheritDoc} */
     @Override
     public void infoSeeFlagCenter(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                  double bodyFacingDirection, double headFacingDirection) {}
+                                  double bodyFacingDirection, double headFacingDirection)
+    {
+        if (!haveSeenSomeMarker) {
+            haveSeenSomeMarker = true;
+            playerPositionModel.addPosition(this, 0,0, direction, distance);
+        }
+    }
 
     /** {@inheritDoc} */
     @Override
     public void infoSeeFlagCornerOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                     double bodyFacingDirection, double headFacingDirection) {}
+                                     double bodyFacingDirection, double headFacingDirection)
+    {
+        int i = 0;
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -517,6 +526,27 @@ public abstract class Player implements ControllerPlayer {
     @Override
     public void infoSeeFlagPenaltyOther(Flag flag, double distance, double direction, double distChange,
                                         double dirChange, double bodyFacingDirection, double headFacingDirection) {}
+
+
+    /** {@inheritDoc} */
+    @Override
+    public void infoSeeFlagRight(Flag flag, double distance, double direction, double distChange, double dirChange,
+                                 double bodyFacingDirection, double headFacingDirection) {}
+
+    /** {@inheritDoc} */
+    @Override
+    public void infoSeeFlagLeft(Flag flag, double distance, double direction, double distChange, double dirChange,
+                                double bodyFacingDirection, double headFacingDirection)
+    {
+        // CENTER,
+        // LEFT, LEFT_10, LEFT_20, LEFT_30,
+        // OTHER_10, OTHER_20, OTHER_30, OTHER_40, OTHER_50,
+        // OWN_10, OWN_20, OWN_30, OWN_40, OWN_50,
+        // RIGHT, RIGHT_10, RIGHT_20, RIGHT_30;
+        if (!haveSeenSomeMarker) {
+            haveSeenSomeMarker = true;
+        }
+    }
 
 
 
