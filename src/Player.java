@@ -2,8 +2,6 @@ import com.github.robocup_atan.atan.model.ActionsPlayer;
 import com.github.robocup_atan.atan.model.ControllerPlayer;
 import com.github.robocup_atan.atan.model.enums.*;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -28,6 +26,15 @@ public abstract class Player implements ControllerPlayer {
             CENTER_LEFT_FORWARD = 10,
             CENTER_RIGHT_FORWARD = 11;
 
+    protected static final double BALL_WITHIN_REACH = 0.7,
+            BALL_VERY_CLOSE = 2,
+            BALL_CLOSE = 15,
+            SHOOTING_RANGE = 10.0;
+
+    protected static final int DRIBBLE_POWER = 3,
+            BASE_SHOOT_POWER = 50;
+
+
     /**
      * Aggression defines the teams overall player style. If the team is losing aggression increases and if they are
      * winning it decreases. Aggression can be read as attack risk.
@@ -42,8 +49,12 @@ public abstract class Player implements ControllerPlayer {
     protected double distanceToBall = 1000,
             directionToBall = 0,
             directionOwnGoal = 0,
-            distanceGoal = -1.0,
+            distanceOwnGoal = -1.0,
+            directionOtherGoal = 0,
+            distanceOtherGoal = -1.0,
             directionMultiplier = 1.0,
+            distanceClostestForwardOwnPlayer = -1,
+            directionClostestForwardOwnPlayer = -1,
             goalTurn;
 
     protected boolean canSeeGoal = false,
@@ -73,12 +84,82 @@ public abstract class Player implements ControllerPlayer {
         }
     }
 
+
     public Player()
     {
         random = new Random(System.currentTimeMillis() + count);
         count++;
     }
 
+
+    /** {@inheritDoc} */
+    @Override
+    public void preInfo() {
+        distanceToBall = 1000;
+        distanceOwnGoal = 1000;
+        directionOwnGoal = 0;
+        distanceOtherGoal = 1000;
+        directionOtherGoal = 0;
+        distanceClostestForwardOwnPlayer = -1;
+        directionClostestForwardOwnPlayer = -1;
+        canSeeGoal = false;
+        canSeeGoalLeft = false;
+        canSeeGoalRight = false;
+        canSeePenalty = false;
+        canSeeFieldEnd = false;
+        goalTurn = 0.0;
+
+    }
+
+    protected abstract void playerHasBallAction();
+    protected abstract void ballIsVeryCloseAction();
+    protected abstract void ballIsCloseAction();
+    protected abstract void ballIsFarAction();
+    protected abstract void ballNotVisibleAction();
+    protected abstract void moveToHoldingPosition();
+    /**
+     *
+     * @return is there a visible player on our team in front of this player
+     */
+    protected boolean isFowardOwnPlayer()
+    {
+        return distanceClostestForwardOwnPlayer > 0;
+    }
+
+    /**
+     *
+     * @return true if the ball is in between the player and other goal. False if not or not known.
+     */
+    protected boolean isBallOtherGoalSideOfPlayer()
+    {
+        return true;
+    }
+
+    /**
+     *
+     * @return true if the ball is in between the player and own goal. False if not or not known.
+     */
+    protected boolean isBallownGoalSideOfPlayer()
+    {
+        return true;
+    }
+
+
+    @Override
+    public void postInfo()
+    {
+        if (distanceToBall <= Player.BALL_WITHIN_REACH) {
+            playerHasBallAction();
+        }else if (distanceToBall <= Player.BALL_VERY_CLOSE) {
+            ballIsVeryCloseAction();
+        }else if (distanceToBall <= Player.BALL_CLOSE) {
+            ballIsCloseAction();
+        }else if (distanceToBall < 1000){
+            ballIsFarAction();
+        }else {
+            ballNotVisibleAction();
+        }
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -185,24 +266,21 @@ public abstract class Player implements ControllerPlayer {
     /** {@inheritDoc} */
 
 
-    protected int randomDashValueVeryFast()
+    protected int dashValueVeryFast()
     {
-        return 100 + random.nextInt(30);
+        return getAggression() + 40 + random.nextInt(30);
     }
 
-    protected int randomDashValueFast()
+    protected int dashValueFast()
     {
-        return 30 + random.nextInt(100);
+        return getAggression() - 20 + random.nextInt(30);
     }
 
-    /**
-     * Randomly choose a slow dash value.
-     * @return
-     */
-    protected int randomDashValueSlow()
+    protected int dashValueSlow()
     {
-        return -10 + random.nextInt(50);
+        return getAggression() - 60 + random.nextInt(30);
     }
+
 
     /** {@inheritDoc} */
     @Override
@@ -238,6 +316,54 @@ public abstract class Player implements ControllerPlayer {
     {
         return playerType;
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public void infoSeeFlagGoalOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
+                                   double bodyFacingDirection, double headFacingDirection)
+    {
+        if(!alreadySeeingGoal)
+            directionMultiplier *= -1.0;
+
+        if(flag.compareTo(Flag.CENTER) == 0)
+        {
+            distanceOwnGoal = distance;
+            directionOwnGoal = direction;
+
+            canSeeGoal = true;
+
+            goalTurn = 180;
+        }
+        if(flag.compareTo(Flag.LEFT) == 0)
+        {
+            canSeeGoalLeft = true;
+            goalTurn = 90;
+        }
+        if(flag.compareTo(Flag.RIGHT) == 0)
+        {
+            canSeeGoalRight = true;
+            goalTurn = -90;
+        }
+    }
+
+
+    /** {@inheritDoc} */
+    @Override
+    public void infoSeeFlagOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
+                               double bodyFacingDirection, double headFacingDirection)
+    {
+        canSeeFieldEnd = true;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override
+    public void infoSeeFlagPenaltyOwn(Flag flag, double distance, double direction, double distChange,
+                                      double dirChange, double bodyFacingDirection, double headFacingDirection)
+    {
+        canSeePenalty = true;
+    }
+
 
     /** {@inheritDoc} */
     @Override
@@ -285,7 +411,10 @@ public abstract class Player implements ControllerPlayer {
     /** {@inheritDoc} */
     @Override
     public void infoSeeFlagGoalOther(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                     double bodyFacingDirection, double headFacingDirection) {}
+                                     double bodyFacingDirection, double headFacingDirection)
+    {
+
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -356,10 +485,5 @@ public abstract class Player implements ControllerPlayer {
                                         double dirChange, double bodyFacingDirection, double headFacingDirection) {}
 
 
-    /** {@inheritDoc} */
-    @Override
-    public void preInfo() {
 
-
-    }
 }

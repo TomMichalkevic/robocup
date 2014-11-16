@@ -10,7 +10,24 @@ import com.github.robocup_atan.atan.model.enums.Flag;
  * <p>Defender class.</p>
  *
  * @author The Turing Autonoma
+ *
+ * Striker behaviour
+ *
+ * If have the ball
+ *  If the goal is close shoot at the goal
+ *  If there is a player in front with space kick it to him
+ *  Kick the ball forwards
+ * If the ball is close
+ *  If in opponents half dash fast towards it
+ *  Else hold position
+ * If the ball is far but visible
+ *  If ball is between goal and player fast dash
+ *  Else hold position
+ * Else If ball not visible move to holding position
+ *
+ * Use aggression to calculate dash speeds and positions
  */
+
 public class Striker extends Player {
 
 
@@ -20,152 +37,69 @@ public class Striker extends Player {
         playerType = "Striker";
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public void preInfo() {
-        super.preInfo();
-        distanceToBall = 1000;
-        distanceGoal = 1000;
-        canSeeGoal = false;
-        canSeeGoalLeft = false;
-        canSeeGoalRight = false;
-        canSeePenalty = false;
-        canSeeFieldEnd = false;
-        goalTurn = 0.0;
-    }
 
-    /** {@inheritDoc} */
-    @Override
-    public void postInfo()
+    protected void playerHasBallAction()
     {
-        if (distanceToBall < 15)
-        {
-            if (distanceToBall < 0.7)
-            {
-                if(canSeeGoal || canSeePenalty)
-                    this.getPlayer().catchBall(directionToBall);
-
-                if(canSeeGoal)
-                    this.getPlayer().kick(60, 135);
-                else
-                    this.getPlayer().kick(60, 0);
-            }
-            else if(canSeeGoal || canSeePenalty)
-            {
-                if(distanceToBall < 2)
-                {
-                    needsToRetreat = true;
-
-                    getPlayer().turn(directionToBall);
-                    getPlayer().dash(randomDashValueFast());
-                }
-                else
-                {
-                    needsToRetreat = true;
-
-                    getPlayer().turn(directionToBall);
-                    getPlayer().dash(randomDashValueVeryFast());
-                }
-            }
-        }
-        else
-        {
-            if(!canSeeGoal && !needsToRetreat)
-            {
-                if(!canSeePenalty)
-                {
-                    getPlayer().turn(90);
-                    getPlayer().dash(randomDashValueFast());
-                }
-                else if((canSeeGoalLeft || canSeeGoalRight) && !canSeeFieldEnd)
-                {
-                    getPlayer().turn(-1.0 * goalTurn);
-                    getPlayer().dash(randomDashValueSlow());
-                }
-                else
-                    getPlayer().turn(25 * directionMultiplier);
-            }
-            else
-            {
-                if(!canSeeGoal)
-                {
-                    getPlayer().turn(90);
-                    getPlayer().dash(randomDashValueSlow());
-                }
-                else if(distanceGoal > 3.5)
-                {
-                    if(!alreadySeeingGoal)
-                    {
-                        getPlayer().turn(directionOwnGoal);
-                        alreadySeeingGoal = true;
-                    }
-
-                    getPlayer().dash(randomDashValueVeryFast());
-                }
-                else
-                {
-                    needsToRetreat = false;
-
-                    if(alreadySeeingGoal)
-                    {
-                        getPlayer().turn(goalTurn);
-                        alreadySeeingGoal = false;
-                    }
-                    else
-                        alreadySeeingGoal = true;
-                }
-            }
+        if (distanceOtherGoal <= Player.SHOOTING_RANGE) {
+            //Shoot
+            this.getPlayer().kick(Player.BASE_SHOOT_POWER + getAggression()/2, directionOtherGoal);
+        }else if (isFowardOwnPlayer()) {
+            //Kick to player
+            this.getPlayer().kick(Player.DRIBBLE_POWER + (int)distanceClostestForwardOwnPlayer, directionClostestForwardOwnPlayer);
+        } else {
+            // Dribble towards goal
+            this.getPlayer().kick(Player.DRIBBLE_POWER, directionOtherGoal);
         }
     }
 
-
-
-    /** {@inheritDoc} */
-    @Override
-    public void infoSeeFlagOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
-                               double bodyFacingDirection, double headFacingDirection)
+    protected void ballIsVeryCloseAction()
     {
-        canSeeFieldEnd = true;
+        getPlayer().turn(directionToBall);
+        if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
+            getPlayer().dash(dashValueFast());
+        } else {
+            getPlayer().dash(dashValueSlow());
+        }
     }
 
-
-    /** {@inheritDoc} */
-    @Override
-    public void infoSeeFlagPenaltyOwn(Flag flag, double distance, double direction, double distChange,
-                                      double dirChange, double bodyFacingDirection, double headFacingDirection)
+    protected void ballIsCloseAction()
     {
-        canSeePenalty = true;
+        if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
+            getPlayer().turn(directionToBall);
+            getPlayer().dash(dashValueVeryFast());
+        } else {
+            moveToHoldingPosition();
+        }
     }
 
-
-    /** {@inheritDoc} */
-    @Override
-    public void infoSeeFlagGoalOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                   double bodyFacingDirection, double headFacingDirection)
+    protected void ballIsFarAction()
     {
-        if(!alreadySeeingGoal)
-            directionMultiplier *= -1.0;
-
-        if(flag.compareTo(Flag.CENTER) == 0)
-        {
-            distanceGoal = distance;
-            directionOwnGoal = direction;
-
-            canSeeGoal = true;
-
-            goalTurn = 180;
-        }
-        if(flag.compareTo(Flag.LEFT) == 0)
-        {
-            canSeeGoalLeft = true;
-            goalTurn = 90;
-        }
-        if(flag.compareTo(Flag.RIGHT) == 0)
-        {
-            canSeeGoalRight = true;
-            goalTurn = -90;
+        if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
+            getPlayer().turn(directionToBall);
+            getPlayer().dash(dashValueFast());
+        } else {
+            moveToHoldingPosition();
         }
     }
 
+    protected void ballNotVisibleAction()
+    {
+        moveToHoldingPosition();
+    }
+
+    protected void moveToHoldingPosition()
+    {
+        // Move players further up the field, in holding position, when more aggressive
+        int position = getAggression()/2 - 25;
+        switch (getPlayer().getNumber()) {
+            case CENTER_RIGHT_FORWARD:
+                getPlayer().move(position, 10);
+                break;
+            case CENTER_LEFT_FORWARD:
+                getPlayer().move(position, -10);
+                break;
+        }
+        getPlayer().dash(dashValueSlow());
+    }
 
 }
