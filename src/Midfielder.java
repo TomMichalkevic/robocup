@@ -83,7 +83,7 @@ public class Midfielder extends Player {
     protected void moveToHoldingPosition()
     {
         // Don't let defenders move to far back!
-        int position = Math.max(getAggression()/4 - 30, -35);
+        int position = Math.max(getAggression()/4 - 30 + ballPositionOffset, -35);
         switch (getPlayer().getNumber()) {
             case LEFT_WING :
                 getPlayer().move(position, -20);

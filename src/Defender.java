@@ -89,7 +89,7 @@ public class Defender extends Player {
     protected void moveToHoldingPosition()
     {
         // Don't let defenders move to far back!
-        int position = Math.max(getAggression()/6 - 45, -45);
+        int position = Math.max(getAggression()/6 - 45 + ballPositionOffset, -45);
         switch (getPlayer().getNumber()) {
             case LEFT_BACK :
                 getPlayer().move(position, -20);

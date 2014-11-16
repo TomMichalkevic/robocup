@@ -38,6 +38,7 @@ public abstract class Player implements ControllerPlayer {
             BASE_SHOOT_POWER = 50;
 
 
+
     /**
      * Aggression defines the teams overall player style. If the team is losing aggression increases and if they are
      * winning it decreases. Aggression can be read as attack risk.
@@ -75,7 +76,7 @@ public abstract class Player implements ControllerPlayer {
 
     protected ActionsPlayer player;
     protected Random random        = null;
-    protected static int count = 0;
+    protected static int count = 0, ballPositionOffset = 0;
     protected String playerType = "";
 
     public int getAggression()

@@ -88,7 +88,7 @@ public class Striker extends Player {
     protected void moveToHoldingPosition()
     {
         // Move players further up the field, in holding position, when more aggressive
-        int position = getAggression()/2 - 25;
+        int position = getAggression()/2 - 25 + ballPositionOffset;
         switch (getPlayer().getNumber()) {
             case CENTER_RIGHT_FORWARD:
                 getPlayer().move(position, 10);
