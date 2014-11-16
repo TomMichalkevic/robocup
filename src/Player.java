@@ -438,12 +438,26 @@ public abstract class Player implements ControllerPlayer {
     /** {@inheritDoc} */
     @Override
     public void infoSeePlayerOther(int number, boolean goalie, double distance, double direction, double distChange,
-                                   double dirChange, double bodyFacingDirection, double headFacingDirection) {}
+                                   double dirChange, double bodyFacingDirection, double headFacingDirection) 
+    {
+        //TODO: Test that this player is actually in front
+        if (distanceClosestForwardOtherPlayer < 0 || distanceClosestForwardOtherPlayer > distance) {
+            distanceClosestForwardOtherPlayer = distance;
+            directionClosestForwardOtherPlayer = direction;
+        }
+    }
 
     /** {@inheritDoc} */
     @Override
     public void infoSeePlayerOwn(int number, boolean goalie, double distance, double direction, double distChange,
-                                 double dirChange, double bodyFacingDirection, double headFacingDirection) {}
+                                 double dirChange, double bodyFacingDirection, double headFacingDirection) 
+    {
+        //TODO: Test that this player is actually in front
+        if (distanceClosestForwardOwnPlayer < 0 || distanceClosestForwardOwnPlayer > distance) {
+            distanceClosestForwardOwnPlayer = distance;
+            directionClosestForwardOwnPlayer = direction;
+        }
+    }
 
     /** {@inheritDoc} */
     @Override
