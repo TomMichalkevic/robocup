@@ -29,9 +29,12 @@ public abstract class Player implements ControllerPlayer {
     protected static final double BALL_WITHIN_REACH = 0.7,
             BALL_VERY_CLOSE = 2,
             BALL_CLOSE = 15,
-            SHOOTING_RANGE = 10.0;
+            STRIKER_SHOOTING_RANGE = 10.0,
+            MIDFIELDER_SHOOTING_RANGE = 20.0;
 
     protected static final int DRIBBLE_POWER = 6,
+            LONG_DRIBBLE_POWER = 6,
+            CLEARANCE_POWER = 50,
             BASE_SHOOT_POWER = 50;
 
 
@@ -53,16 +56,21 @@ public abstract class Player implements ControllerPlayer {
             directionOtherGoal = 0,
             distanceOtherGoal = -1.0,
             directionMultiplier = 1.0,
-            distanceClostestForwardOwnPlayer = -1,
-            directionClostestForwardOwnPlayer = -1,
-            goalTurn;
+            distanceClosestForwardOwnPlayer = -1,
+            directionClosestForwardOwnPlayer = -1,
+            distanceClosestForwardOtherPlayer = -1,
+            directionClosestForwardOtherPlayer = -1,
+            ownGoalTurn,
+            otherGoalTurn;
 
-    protected boolean canSeeGoal = false,
+    protected boolean canSeeOwnGoal = false,
             canSeeGoalLeft = false,
             canSeeGoalRight = false,
             canSeeFieldEnd = false,
-            alreadySeeingGoal = false,
-            canSeePenalty = false,
+            alreadySeeingOwnGoal = false,
+            alreadySeeingOtherGoal = false,
+            canSeeOtherGoal = false,
+            canSeeOwnPenalty = false,
             needsToRetreat = false;
 
     protected ActionsPlayer player;
@@ -100,14 +108,16 @@ public abstract class Player implements ControllerPlayer {
         directionOwnGoal = 0;
         distanceOtherGoal = 1000;
         directionOtherGoal = 0;
-        distanceClostestForwardOwnPlayer = -1;
-        directionClostestForwardOwnPlayer = -1;
-        canSeeGoal = false;
+        distanceClosestForwardOwnPlayer = -1;
+        directionClosestForwardOwnPlayer = -1;
+        distanceClosestForwardOtherPlayer = -1;
+        directionClosestForwardOtherPlayer = -1;
+        canSeeOwnGoal = false;
         canSeeGoalLeft = false;
         canSeeGoalRight = false;
-        canSeePenalty = false;
+        canSeeOwnPenalty = false;
         canSeeFieldEnd = false;
-        goalTurn = 0.0;
+        ownGoalTurn = 0.0;
 
     }
 
@@ -117,13 +127,19 @@ public abstract class Player implements ControllerPlayer {
     protected abstract void ballIsFarAction();
     protected abstract void ballNotVisibleAction();
     protected abstract void moveToHoldingPosition();
+
+    protected boolean areNoCloseForwardPlayers()
+    {
+        return (distanceClosestForwardOwnPlayer > 8 && distanceClosestForwardOtherPlayer > 8) ||
+                (distanceClosestForwardOwnPlayer < 0 && distanceClosestForwardOtherPlayer < 0);
+    }
     /**
      *
      * @return is there a visible player on our team in front of this player
      */
     protected boolean isFowardOwnPlayer()
     {
-        return distanceClostestForwardOwnPlayer > 0;
+        return distanceClosestForwardOwnPlayer > 0;
     }
 
     /**
@@ -139,7 +155,7 @@ public abstract class Player implements ControllerPlayer {
      *
      * @return true if the ball is in between the player and own goal. False if not or not known.
      */
-    protected boolean isBallownGoalSideOfPlayer()
+    protected boolean isBallOwnGoalSideOfPlayer()
     {
         return true;
     }
@@ -322,27 +338,22 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagGoalOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
                                    double bodyFacingDirection, double headFacingDirection)
     {
-        if(!alreadySeeingGoal)
+        if (!alreadySeeingOwnGoal) {
             directionMultiplier *= -1.0;
-
-        if(flag.compareTo(Flag.CENTER) == 0)
-        {
+        }
+        if (flag.compareTo(Flag.CENTER) == 0) {
             distanceOwnGoal = distance;
             directionOwnGoal = direction;
-
-            canSeeGoal = true;
-
-            goalTurn = 180;
+            canSeeOwnGoal = true;
+            ownGoalTurn = 180;
         }
-        if(flag.compareTo(Flag.LEFT) == 0)
-        {
+        if (flag.compareTo(Flag.LEFT) == 0) {
             canSeeGoalLeft = true;
-            goalTurn = 90;
+            ownGoalTurn = 90;
         }
-        if(flag.compareTo(Flag.RIGHT) == 0)
-        {
+        if (flag.compareTo(Flag.RIGHT) == 0) {
             canSeeGoalRight = true;
-            goalTurn = -90;
+            ownGoalTurn = -90;
         }
     }
 
@@ -361,7 +372,7 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagPenaltyOwn(Flag flag, double distance, double direction, double distChange,
                                       double dirChange, double bodyFacingDirection, double headFacingDirection)
     {
-        canSeePenalty = true;
+        canSeeOwnPenalty = true;
     }
 
 
@@ -413,6 +424,14 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagGoalOther(Flag flag, double distance, double direction, double distChange, double dirChange,
                                      double bodyFacingDirection, double headFacingDirection)
     {
+
+        if(flag.compareTo(Flag.CENTER) == 0)
+        {
+            distanceOtherGoal = distance;
+            directionOtherGoal = direction;
+            canSeeOtherGoal = true;
+            otherGoalTurn = 180;
+        }
 
     }
 

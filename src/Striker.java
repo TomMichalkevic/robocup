@@ -1,8 +1,6 @@
 
 //~--- non-JDK imports --------------------------------------------------------
 
-import com.github.robocup_atan.atan.model.enums.Flag;
-
 //~--- JDK imports ------------------------------------------------------------
 
 
@@ -14,7 +12,7 @@ import com.github.robocup_atan.atan.model.enums.Flag;
  * Striker behaviour
  *
  * If have the ball
- *  If the goal is close shoot at the goal
+ *  If the goal is really close shoot at the goal
  *  If there is a player in front with space kick it to him
  *  Kick the ball forwards
  * If the ball is close
@@ -40,15 +38,15 @@ public class Striker extends Player {
 
     protected void playerHasBallAction()
     {
-        if (distanceOtherGoal <= Player.SHOOTING_RANGE) {
+        if (distanceOtherGoal <= STRIKER_SHOOTING_RANGE) {
             //Shoot
-            this.getPlayer().kick(Player.BASE_SHOOT_POWER + getAggression()/2, directionOtherGoal);
+            this.getPlayer().kick(BASE_SHOOT_POWER + getAggression(), directionOtherGoal);
         }else if (isFowardOwnPlayer()) {
             //Kick to player
-            this.getPlayer().kick(Player.DRIBBLE_POWER + (int)distanceClostestForwardOwnPlayer, directionClostestForwardOwnPlayer);
+            this.getPlayer().kick(DRIBBLE_POWER + (int) distanceClosestForwardOwnPlayer, directionClosestForwardOwnPlayer);
         } else {
             // Dribble towards goal
-            this.getPlayer().kick(Player.DRIBBLE_POWER, directionOtherGoal);
+            this.getPlayer().kick(DRIBBLE_POWER, directionOtherGoal);
         }
     }
 

@@ -1,8 +1,6 @@
 
 //~--- non-JDK imports --------------------------------------------------------
 
-import com.github.robocup_atan.atan.model.enums.Flag;
-
 //~--- JDK imports ------------------------------------------------------------
 
 
@@ -20,10 +18,10 @@ public class Goalie extends Player {
 
     protected void playerHasBallAction()
     {
-        if(canSeeGoal || canSeePenalty) {
+        if(canSeeOwnGoal || canSeeOwnPenalty) {
             this.getPlayer().catchBall(directionToBall);
         }
-        if(canSeeGoal) {
+        if(canSeeOwnGoal) {
             this.getPlayer().kick(60, 135);
         } else {
             this.getPlayer().kick(60, 0);
@@ -32,7 +30,7 @@ public class Goalie extends Player {
 
     protected void ballIsVeryCloseAction()
     {
-        if(canSeeGoal || canSeePenalty) {
+        if(canSeeOwnGoal || canSeeOwnPenalty) {
             needsToRetreat = true;
             getPlayer().turn(directionToBall);
             getPlayer().dash(dashValueFast());
@@ -41,7 +39,7 @@ public class Goalie extends Player {
 
     protected void ballIsCloseAction()
     {
-        if(canSeeGoal || canSeePenalty) {
+        if(canSeeOwnGoal || canSeeOwnPenalty) {
             needsToRetreat = true;
             getPlayer().turn(directionToBall);
             getPlayer().dash(dashValueVeryFast());
@@ -50,33 +48,33 @@ public class Goalie extends Player {
 
     protected void ballIsFarAction()
     {
-        if (!canSeeGoal && !needsToRetreat) {
-            if (!canSeePenalty) {
+        if (!canSeeOwnGoal && !needsToRetreat) {
+            if (!canSeeOwnPenalty) {
                 getPlayer().turn(90);
                 getPlayer().dash(dashValueFast());
             } else if ((canSeeGoalLeft || canSeeGoalRight) && !canSeeFieldEnd) {
-                getPlayer().turn(-1.0 * goalTurn);
+                getPlayer().turn(-1.0 * ownGoalTurn);
                 getPlayer().dash(dashValueSlow());
             } else {
                 getPlayer().turn(25 * directionMultiplier);
             }
         } else {
-            if (!canSeeGoal) {
+            if (!canSeeOwnGoal) {
                 getPlayer().turn(90);
                 getPlayer().dash(dashValueSlow());
             } else if (distanceOwnGoal > 3.5) {
-                if (!alreadySeeingGoal) {
+                if (!alreadySeeingOwnGoal) {
                     getPlayer().turn(directionOwnGoal);
-                    alreadySeeingGoal = true;
+                    alreadySeeingOwnGoal = true;
                 }
                 getPlayer().dash(dashValueVeryFast());
             } else {
                 needsToRetreat = false;
-                if (alreadySeeingGoal) {
-                    getPlayer().turn(goalTurn);
-                    alreadySeeingGoal = false;
+                if (alreadySeeingOwnGoal) {
+                    getPlayer().turn(ownGoalTurn);
+                    alreadySeeingOwnGoal = false;
                 } else {
-                    alreadySeeingGoal = true;
+                    alreadySeeingOwnGoal = true;
                 }
             }
         }
