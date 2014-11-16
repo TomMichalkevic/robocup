@@ -31,7 +31,7 @@ public abstract class Player implements ControllerPlayer {
             BALL_CLOSE = 15,
             SHOOTING_RANGE = 10.0;
 
-    protected static final int DRIBBLE_POWER = 3,
+    protected static final int DRIBBLE_POWER = 6,
             BASE_SHOOT_POWER = 50;
 
 
