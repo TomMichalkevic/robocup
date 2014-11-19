@@ -161,7 +161,7 @@ public class PlayerPositionModel {
         //TODO case where on same x line. case where two different lines
 
 
-        if (p.x == Double.NaN) {
+        if (p != null && p.x == Double.NaN) {
             int i = 6;
         }
         return p;
