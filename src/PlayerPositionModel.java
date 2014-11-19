@@ -92,60 +92,79 @@ public class PlayerPositionModel {
 
     }
 
-    private Point triangulate(ObjectAbsolutePosition a, ObjectAbsolutePosition b)
+    private Point triangulate(ObjectAbsolutePosition posA, ObjectAbsolutePosition posB)
     {
         //First find the distance between the two known points.
-        double distance = Math.sqrt(Math.pow((a.markerAbsoluteX - b.markerAbsoluteX), 2) + Math.pow((a.markerAbsoluteY - b.markerAbsoluteY), 2));
+        double distanceC = Math.sqrt(Math.pow((posA.markerAbsoluteX - posB.markerAbsoluteX), 2) + Math.pow((posA.markerAbsoluteY - posB.markerAbsoluteY), 2));
 
         //Use smallest distance for least error.?
 
         // Use law of cosines c^2 = a^2 + b^2  - 2ab cos(C)
+        double distanceA = posB.distance;
+        double distanceB = posA.distance;
 
-        double leftA = (Math.pow(distance, 2) + Math.pow(b.distance, 2) - Math.pow(a.distance, 2));
-        double leftB = (Math.pow(distance, 2) + Math.pow(b.distance, 2) - Math.pow(a.distance, 2));
-        double angleA = Math.acos(leftA / (2 * b.distance * distance));
-        double angleB = Math.acos(leftB / (2 * a.distance * distance));
+        double distanceASquared = Math.pow(distanceA, 2);
+        double distanceBSquared = Math.pow(distanceB, 2);
+        double distanceCSquared = Math.pow(distanceC, 2);
 
 
-        if (a.markerAbsoluteX == b.markerAbsoluteX || a.markerAbsoluteY == b.markerAbsoluteY) {
+
+        double angleA = Math.acos(
+                ( distanceBSquared + distanceCSquared - distanceASquared )
+                                     /
+                        (2 * distanceB * distanceC)
+        );
+
+        double angleB = Math.acos(
+                ( distanceCSquared + distanceASquared - distanceBSquared )
+                        /
+                        (2 * distanceC * distanceA)
+        );
+
+//        double angleC = Math.PI - (angleA + angleB);
+        Point p = null;
+
+        if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
 
             Point offset;
             // If points are on the same x line we have all we need
-            if (a.markerAbsoluteX == b.markerAbsoluteX) {
-                if (a.markerAbsoluteY > b.markerAbsoluteY) {
+            if (posA.markerAbsoluteX == posB.markerAbsoluteX) {
+                if (posA.markerAbsoluteY > posB.markerAbsoluteY) {
                     //swap
-                    offset = findOffset(angleB, angleA, b.distance, a.distance, distance);
+                    offset = findOffset(angleB, angleA, distanceB, distanceA, distanceC);
                 } else {
-                    offset = findOffset(angleA, angleB, a.distance, b.distance, distance);
+                    offset = findOffset(angleA, angleB, distanceA, distanceB, distanceC);
                 }
 
-                if (a.markerAbsoluteX == Player.PITCH_BOUNDARY_X_WIDTH) { //Top line
-                    return new Point(a.markerAbsoluteX - offset.y, a.markerAbsoluteY + offset.x);
+                if (posA.markerAbsoluteX == Player.PITCH_BOUNDARY_X_WIDTH) { //Top line
+                    p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x);
                 }
-                if (a.markerAbsoluteX == 0) { //Bottom line
-                    return new Point(a.markerAbsoluteX + offset.y, a.markerAbsoluteY + offset.x);
+                if (posA.markerAbsoluteX == 0) { //Bottom line
+                    p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
                 }
             }
-            if (a.markerAbsoluteY == b.markerAbsoluteY) {
-                if (a.markerAbsoluteX > b.markerAbsoluteX) {
+            if (posA.markerAbsoluteY == posB.markerAbsoluteY) {
+                if (posA.markerAbsoluteX > posB.markerAbsoluteX) {
                     //swap
-                    offset = findOffset(angleB, angleA, b.distance, a.distance, distance);
+                    offset = findOffset(angleB, angleA, distanceB, distanceA, distanceC);
                 } else {
-                    offset = findOffset(angleA, angleB, a.distance, b.distance, distance);
+                    offset = findOffset(angleA, angleB, distanceA, distanceB, distanceC);
                 }
-                if (a.markerAbsoluteY == Player.PITCH_BOUNDARY_Y_WIDTH) { //Top line
-                    return new Point(a.markerAbsoluteX + offset.x, a.markerAbsoluteY - offset.y);
+                if (posA.markerAbsoluteY == Player.PITCH_BOUNDARY_Y_WIDTH) { //Top line
+                    p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
                 }
-                if (a.markerAbsoluteY == 0) { //Bottom line
-                    return new Point(a.markerAbsoluteX + offset.x, a.markerAbsoluteY + offset.y);
+                if (posA.markerAbsoluteY == 0) { //Bottom line
+                    p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
                 }
             }
         }
         //TODO case where on same x line. case where two different lines
 
 
-
-        return null;
+        if (p.x == Double.NaN) {
+            int i = 6;
+        }
+        return p;
 
     }
 
