@@ -1,5 +1,3 @@
-import java.awt.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +7,6 @@ import java.util.Map;
  */
 public class PlayerPositionModel {
 
-    private static final double MAX_REASONABLE_VIEWABLE_DISTANCE = 100.0;
 
     private HashMap<String,Point> lastKnownPositions;
     private HashMap<String,Point> knownPositions;
@@ -83,8 +80,8 @@ public class PlayerPositionModel {
             if (estimatedPosition.numberPoints > 0) {
                 estimatedPosition.x /= estimatedPosition.numberPoints;
                 estimatedPosition.y /= estimatedPosition.numberPoints;
-                estimatedPosition.y -= Player.PITCH_BOUNDARY_Y_WIDTH/2;
-                estimatedPosition.x -= Player.PITCH_BOUNDARY_X_WIDTH/2;
+                estimatedPosition.y -= Player.BOUNDARY_HEIGHT /2;
+                estimatedPosition.x -= Player.BOUNDARY_WIDTH /2;
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
@@ -110,11 +107,6 @@ public class PlayerPositionModel {
         }
 
 
-        if (distanceA > MAX_REASONABLE_VIEWABLE_DISTANCE ||
-            distanceB > MAX_REASONABLE_VIEWABLE_DISTANCE) {
-            return null;
-        }
-
 
         double distanceASquared = Math.pow(distanceA, 2);
         double distanceBSquared = Math.pow(distanceB, 2);
@@ -136,42 +128,47 @@ public class PlayerPositionModel {
 
 //        double angleC = Math.PI - (angleA + angleB);
         Point p = null;
-
+        Point offset;
         if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
 
-            Point offset;
             // If points are on the same x line we have all we need
             if (posA.markerAbsoluteX == posB.markerAbsoluteX) {
                 if (posA.markerAbsoluteY > posB.markerAbsoluteY) {
                     //swap
-                    offset = findOffset(angleB, angleA, distanceB, distanceA, distanceC);
+                    offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
                 } else {
-                    offset = findOffset(angleA, angleB, distanceA, distanceB, distanceC);
+                    offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
                 }
 
-                if (posA.markerAbsoluteX == Player.PITCH_BOUNDARY_X_WIDTH) { //Top line
+                if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH) { //Top line
                     p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x);
                 }
                 if (posA.markerAbsoluteX == 0) { //Bottom line
                     p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
                 }
+                //TODO case where on center line
             }
             if (posA.markerAbsoluteY == posB.markerAbsoluteY) {
                 if (posA.markerAbsoluteX > posB.markerAbsoluteX) {
                     //swap
-                    offset = findOffset(angleB, angleA, distanceB, distanceA, distanceC);
+                    offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
                 } else {
-                    offset = findOffset(angleA, angleB, distanceA, distanceB, distanceC);
+                    offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
                 }
-                if (posA.markerAbsoluteY == Player.PITCH_BOUNDARY_Y_WIDTH) { //Top line
+                if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top line
                     p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
                 }
                 if (posA.markerAbsoluteY == 0) { //Bottom line
                     p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
                 }
             }
+        } else {
+              if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top left corner
+                  Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY
+                  offset = findOffsetPerpendicular(angleA, ,distanceB);
+              }
         }
-        //TODO case where on same x line. case where two different lines
+
 
         if (angleA == Double.NaN){
             int j = 0;
@@ -181,18 +178,34 @@ public class PlayerPositionModel {
     }
 
 
-    private Point findOffset(double angleA, double angleB, double distanceA, double distanceB, double distanceC)
+    private Point findOffsetParallel(double angleA, double angleB, double distanceA, double distanceB, double distanceC)
     {
         double yOffset, xOffset;
         if (angleA > Math.PI/2){ //Case 1
             yOffset = Math.sin(Math.PI - angleA) * distanceB;
             xOffset = -Math.cos(Math.PI - angleA) * distanceB;
-        } else if (angleB > Math.PI/2){
+        } else if (angleB > Math.PI/2){ // Case 2
             yOffset = Math.sin(Math.PI - angleB) * distanceA;
             xOffset = distanceC + Math.cos(Math.PI - angleB) * distanceA;
-        } else {
+        } else { // Case 3
             yOffset = Math.sin(angleA) * distanceB;
             xOffset = Math.cos(Math.PI - angleA) * distanceB;
+        }
+        return new Point(xOffset, yOffset);
+    }
+
+    private Point findOffsetPerpendicular(double angleA, double angleX, double distanceB)
+    {
+
+        double yOffset, xOffset;
+        if (angleA + angleX < Math.PI/2) { // Case 1
+            double angleY = Math.PI - (angleA + angleX);
+            yOffset = Math.sin(angleY) * distanceB;
+            xOffset = Math.cos(angleY) * distanceB;
+        } else { // Case 2
+            double angleY = Math.PI - (angleA + angleX);
+            yOffset = -Math.sin(angleY) * distanceB;
+            xOffset = Math.cos(angleY) * distanceB;
         }
         return new Point(xOffset, yOffset);
     }
@@ -213,8 +226,8 @@ class ObjectAbsolutePosition {
     public ObjectAbsolutePosition(int number, int markerAbsoluteX, int markerAbsoluteY, double direction, double distance)
     {
         //Lets convert to simple +xy axis when creating points
-        this.markerAbsoluteX = markerAbsoluteX + Player.PITCH_BOUNDARY_X_WIDTH/2;
-        this.markerAbsoluteY = markerAbsoluteY + Player.PITCH_BOUNDARY_Y_WIDTH/2;
+        this.markerAbsoluteX = markerAbsoluteX + Player.BOUNDARY_WIDTH /2;
+        this.markerAbsoluteY = markerAbsoluteY + Player.BOUNDARY_HEIGHT /2;
         this.number = number;
         this.direction = direction;
         this.distance = distance;
@@ -277,5 +290,136 @@ class EstimatedPosition {
         x = 0;
         y = 0;
         this.identifier = identifier;
+    }
+}
+
+class Triangle {
+
+
+    public double sideC = 0;
+    public double sideA = 0;
+    public double sideB = 0;
+    public double angleA = 0;
+    public double angleB = 0;
+    public double angleC = 0;
+
+
+
+    public boolean caculate()
+    {
+        if (canMakeTriangle()) {
+            return false; // Need at least 3 parts to calculate
+        }
+        // Triangle inequality theory can be broken with randomised lengths, so check for it.
+        // Just give up if no triangle can be made.
+
+        if (numSides() == 3) {
+            if (sideA + sideB < sideC ||
+                sideA + sideC < sideB ||
+                sideB + sideC < sideA) {
+                return false;
+            }else {
+                threeSides();
+                return true;
+            }
+        }
+        if (numAngles() == 2) {
+            if (sideA == 0) {
+                sideA = Math.PI - (sideB + sideC);
+            } else if (sideB == 0) {
+                sideB = Math.PI - (sideA + sideC);
+            } else {
+                sideC = Math.PI - (sideA + sideB);
+            }
+        }
+
+        double x = 0;
+        if (angleA > 0 && sideA > 0){
+            x = Math.sin(angleA)/sideA;
+        } else if (angleB > 0 && sideB > 0){
+            x = Math.sin(angleB)/sideB;
+        } else if (angleC > 0 && sideC > 0){
+            x = Math.sin(angleC)/sideC;
+        }
+
+        if (x > 0) {
+            if (angleA > 0 && sideA == 0) {
+                sideA = x * Math.sin(angleA);
+            }
+
+            if (angleB > 0 && sideB == 0) {
+                sideB = x * Math.sin(angleB);
+            }
+
+            if (angleC > 0 && sideC == 0) {
+                sideC = x * Math.sin(angleC);
+            }
+
+            // SSA might be two solutions...
+            if (sideA > 0 && angleA == 0){
+                angleA = Math.asin(sideA/x);
+            }
+            if (sideC > 0 && angleC == 0){
+                angleC = Math.asin(sideC/x);
+            }
+            if (sideB > 0 && angleB == 0){
+                angleB = Math.asin(sideB/x);
+            }
+
+        }
+        // 
+
+        return false;
+    }
+
+    private boolean canMakeTriangle()
+    {
+        return ! (numSides() == 0 || numValues() < 3);
+    }
+
+    private int numValues()
+    {
+        return numSides() + numAngles();
+    }
+
+    private int numSides()
+    {
+        return  oneOrNone(sideA) +
+                oneOrNone(sideB) +
+                oneOrNone(sideC);
+    }
+
+    private int numAngles()
+    {
+        return  oneOrNone(angleA) +
+                oneOrNone(angleB) +
+                oneOrNone(angleC);
+    }
+
+    private int oneOrNone(double value)
+    {
+        return value > 0 ? 1 : 0;
+    }
+
+    private void threeSides()
+    {
+        double distanceASquared = Math.pow(sideA, 2);
+        double distanceBSquared = Math.pow(sideB, 2);
+        double distanceCSquared = Math.pow(sideC, 2);
+
+        // Use law of cosines c^2 = a^2 + b^2  - 2ab cos(C)
+        angleA = Math.acos(
+                ( distanceBSquared + distanceCSquared - distanceASquared )
+                                    /
+                        (2 * sideB * sideC)
+        );
+
+        angleB = Math.acos(
+                ( distanceCSquared + distanceASquared - distanceBSquared )
+                                    /
+                        (2 * sideC * sideA)
+        );
+
+        angleC = Math.PI - (angleA + angleB);
     }
 }

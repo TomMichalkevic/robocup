@@ -11,8 +11,8 @@ import java.util.Random;
  */
 public abstract class Player implements ControllerPlayer {
 
-    public static final int PITCH_BOUNDARY_X_WIDTH = 114,
-            PITCH_BOUNDARY_Y_WIDTH = 70,
+    public static final int BOUNDARY_WIDTH = 114,
+            BOUNDARY_HEIGHT = 70,
             PENALTY_DISTANCE_FROM_CENTER = 43,
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5;
     /**
@@ -148,7 +148,7 @@ public abstract class Player implements ControllerPlayer {
     protected abstract void moveToHoldingPosition();
     protected void lookAround()
     {
-
+        getPlayer().turn(90);
     }
 
     protected boolean areNoCloseForwardPlayers()
@@ -530,7 +530,7 @@ public abstract class Player implements ControllerPlayer {
                                  double bodyFacingDirection, double headFacingDirection)
     {
         int flagY = flagToY(flag);
-        int flagX = PITCH_BOUNDARY_X_WIDTH/2;
+        int flagX = BOUNDARY_WIDTH /2;
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -543,7 +543,7 @@ public abstract class Player implements ControllerPlayer {
                                double bodyFacingDirection, double headFacingDirection)
     {
         int flagY = flagToY(flag);
-        int flagX = -PITCH_BOUNDARY_X_WIDTH/2;
+        int flagX = -BOUNDARY_WIDTH /2;
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -570,7 +570,7 @@ public abstract class Player implements ControllerPlayer {
                 multiple = 1;
                 break;
         }
-        int flagY = multiple * ((PITCH_BOUNDARY_Y_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2);
+        int flagY = multiple * ((BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2);
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance); //TODO distance could be negative
@@ -582,8 +582,8 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagCornerOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
                                      double bodyFacingDirection, double headFacingDirection)
     {
-        int flagX = -(PITCH_BOUNDARY_X_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
-        int flagY = (PITCH_BOUNDARY_Y_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
+        int flagX = -(BOUNDARY_WIDTH -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
+        int flagY = (BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -595,8 +595,8 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagCornerOther(Flag flag, double distance, double direction, double distChange,
                                        double dirChange, double bodyFacingDirection, double headFacingDirection)
     {
-        int flagX = (PITCH_BOUNDARY_X_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
-        int flagY = (PITCH_BOUNDARY_Y_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
+        int flagX = (BOUNDARY_WIDTH -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
+        int flagY = (BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -636,7 +636,7 @@ public abstract class Player implements ControllerPlayer {
                                  double bodyFacingDirection, double headFacingDirection)
     {
         int flagX = flagToX(flag);
-        int flagY = PITCH_BOUNDARY_Y_WIDTH/2;
+        int flagY = BOUNDARY_HEIGHT /2;
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -658,7 +658,7 @@ public abstract class Player implements ControllerPlayer {
         stuff.put(flag + " " + getPlayer().getNumber(), "dir: "+direction+" dis:"+distance);
 
         int flagX = flagToX(flag);
-        int flagY = -PITCH_BOUNDARY_Y_WIDTH/2;
+        int flagY = -BOUNDARY_HEIGHT /2;
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
