@@ -1,3 +1,5 @@
+import javafx.geometry.Side;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,10 +71,11 @@ public class PlayerPositionModel {
             ArrayList<ObjectAbsolutePosition> absolutes = entry.getValue();
             for (int i = 0; i < absolutes.size()-1; i++) {
                 for (int j = i+1; j < absolutes.size(); j++) {
-                    Point p = triangulate(absolutes.get(i), absolutes.get(j));
+                    DirectedPoint p = triangulate(absolutes.get(i), absolutes.get(j));
                     if (p != null){
                         estimatedPosition.x += p.x;
                         estimatedPosition.y += p.y;
+                        estimatedPosition.absoluteDirection += p.direction;
                         estimatedPosition.numberPoints++;
                     }
                 }
@@ -80,8 +83,10 @@ public class PlayerPositionModel {
             if (estimatedPosition.numberPoints > 0) {
                 estimatedPosition.x /= estimatedPosition.numberPoints;
                 estimatedPosition.y /= estimatedPosition.numberPoints;
+                estimatedPosition.absoluteDirection /= estimatedPosition.numberPoints;
                 estimatedPosition.y -= Player.BOUNDARY_HEIGHT /2;
                 estimatedPosition.x -= Player.BOUNDARY_WIDTH /2;
+                estimatedPosition.absoluteDirection = Math.toDegrees(estimatedPosition.absoluteDirection);
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
@@ -91,7 +96,54 @@ public class PlayerPositionModel {
 
     }
 
-    private Point triangulate(ObjectAbsolutePosition posA, ObjectAbsolutePosition posB)
+    private double angleCWithPointAndADist(Point point, double distanceA)
+    {
+        Triangle t3 = new Triangle();
+        t3.sideA = point.y;
+        t3.sideB = distanceA;
+        t3.sideC = Math.abs(point.x);
+        t3.calculate();
+        return t3.angleC;
+    }
+
+    private double playerDirectionForSide(Side side, double x, double posADirection, double directionOffset)
+    {
+        double pDir = 0;
+        switch (side) {
+            case LEFT:
+                if (x < 0) {
+                    pDir = Math.toRadians(posADirection) + directionOffset;
+                } else {
+                    pDir = Math.toRadians(posADirection) - directionOffset;
+                }
+                break;
+            case RIGHT:
+                if (x < 0) {
+                    pDir = Math.PI - (Math.toRadians(posADirection) + directionOffset);
+                } else {
+                    pDir = Math.PI + (Math.toRadians(posADirection) - directionOffset);
+                }
+                break;
+            case TOP:
+                if (x < 0) {
+                    pDir = (Math.PI/2) + (directionOffset - Math.toRadians(posADirection));
+                } else {
+                    pDir = (Math.PI/2) - (directionOffset + Math.toRadians(posADirection));
+                }
+                break;
+            case BOTTOM:
+                if (x < 0) {
+                    pDir = (3*Math.PI/2) - (directionOffset + Math.toRadians(posADirection));
+                } else {
+                    pDir = (3*Math.PI/2) + (directionOffset - Math.toRadians(posADirection));
+                }
+                break;
+        }
+        return pDir;
+    }
+
+
+    private DirectedPoint triangulate(ObjectAbsolutePosition posA, ObjectAbsolutePosition posB)
     {
         //First find the distance between the two known points.
         double distanceC = Math.sqrt(Math.pow((posA.markerAbsoluteX - posB.markerAbsoluteX), 2) + Math.pow((posA.markerAbsoluteY - posB.markerAbsoluteY), 2));
@@ -101,12 +153,13 @@ public class PlayerPositionModel {
         t1.sideA = distanceA;
         t1.sideB = distanceB;
         t1.sideC = distanceC;
-        Point p = null;
+        DirectedPoint p = null;
         if (t1.calculate()) { // If we can make a triangle
 
             double angleA = t1.angleA;
             double angleB = t1.angleB;
             Point offset = null;
+            double pDir;
             if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
 
                 // If points are on the same x line we have all we need
@@ -118,11 +171,16 @@ public class PlayerPositionModel {
                         offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
                     }
 
-                    if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH) { //Top line
-                        p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x);
+                    double directionOffset = angleCWithPointAndADist(offset, posA.distance);
+
+                    if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH) { //Right line
+                        pDir = playerDirectionForSide(Side.RIGHT, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x, pDir);
                     }
-                    if (posA.markerAbsoluteX == 0) { //Bottom line
-                        p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
+                    if (posA.markerAbsoluteX == 0) { //Left Line
+                        pDir = playerDirectionForSide(Side.LEFT, offset.x, posA.direction, directionOffset);
+
+                        p = new DirectedPoint(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x, pDir);
                     }
                     //TODO case where on center line
                 }
@@ -133,14 +191,20 @@ public class PlayerPositionModel {
                     } else {
                         offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
                     }
+
+                    double directionOffset = angleCWithPointAndADist(offset, posA.distance);
+
                     if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top line
-                        p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
+                        pDir = playerDirectionForSide(Side.TOP, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y, pDir);
                     }
                     if (posA.markerAbsoluteY == 0) { //Bottom line
-                        p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
+                        pDir = playerDirectionForSide(Side.BOTTOM, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y, pDir);
                     }
                 }
             } else {
+
                 for (int i = 0; i < 1; i++){ //Easy way to skip code when break
                     //Top left corner
                     if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT) {
@@ -151,7 +215,11 @@ public class PlayerPositionModel {
                         offset = findOffsetPerpendicular(angleB, posA.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posB.markerAbsoluteY, distanceA);
                     }
                     if (offset != null) {
-                        p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
+
+                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
+                        // Same as LEFT
+                        pDir = playerDirectionForSide(Side.LEFT, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x, pDir);
                         break;
                     }
 
@@ -165,7 +233,9 @@ public class PlayerPositionModel {
                     }
 
                     if (offset != null) {
-                        p = new Point(posA.markerAbsoluteX - offset.x, posA.markerAbsoluteY + offset.y);
+                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
+                        pDir = playerDirectionForSide(Side.BOTTOM, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX - offset.x, posA.markerAbsoluteY + offset.y, pDir);
                         break;
                     }
 
@@ -179,7 +249,9 @@ public class PlayerPositionModel {
                     }
 
                     if (offset != null) {
-                        p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY - offset.x);
+                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
+                        pDir = playerDirectionForSide(Side.RIGHT, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY - offset.x,pDir);
                         break;
                     }
                     //Top right
@@ -191,7 +263,9 @@ public class PlayerPositionModel {
                         offset = findOffsetPerpendicular(angleB, Player.BOUNDARY_WIDTH - posB.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY, distanceA);
                     }
                     if (offset != null) {
-                        p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
+                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
+                        pDir = playerDirectionForSide(Side.TOP, offset.x, posA.direction, directionOffset);
+                        p = new DirectedPoint(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y, pDir);
                         break;
                     }
                 }
@@ -210,7 +284,6 @@ public class PlayerPositionModel {
 
     private Point findOffsetParallel(double angleA, double angleB, double distanceA, double distanceB, double distanceC)
     {
-        //ERROR
         double yOffset, xOffset;
         if (angleA > Math.PI/2){ //Case 1
             yOffset = Math.sin(Math.PI - angleA) * distanceB;
@@ -310,6 +383,16 @@ class Point {
     }
 }
 
+// LEFT is 0 degrees...
+class DirectedPoint extends Point {
+    public double direction;
+    public DirectedPoint(double x, double y, double direction){
+        super(x, y);
+        this.direction = direction;
+    }
+}
+
+
 class EstimatedPosition {
 
     public int identifier; // (-11 to 11) - other team + our team 0=ball
@@ -317,11 +400,13 @@ class EstimatedPosition {
     public double totalOffset;
     public double x;
     public double y;
+    public double absoluteDirection;
 
     EstimatedPosition(int identifier)
     {
         totalOffset = 0;
         numberPoints = 0;
+        absoluteDirection = 0;
         x = 0;
         y = 0;
         this.identifier = identifier;
