@@ -80,11 +80,6 @@ public class Defender extends Player {
         }
     }
 
-    protected void ballNotVisibleAction()
-    {
-        moveToHoldingPosition();
-    }
-
 
     protected void moveToHoldingPosition()
     {

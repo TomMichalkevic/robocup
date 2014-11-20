@@ -74,11 +74,6 @@ public class Midfielder extends Player {
         getPlayer().dash(dashValueSlow());
     }
 
-    protected void ballNotVisibleAction()
-    {
-        moveToHoldingPosition();
-    }
-
 
     protected void moveToHoldingPosition()
     {
