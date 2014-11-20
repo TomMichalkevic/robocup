@@ -15,7 +15,7 @@ public class PlayerPositionModel {
     private ArrayList<Player> unmappedPlayersWithUnknownPositions;
     private HashMap<Integer, ArrayList<ObjectAbsolutePosition>> absolute;
     private HashMap<Integer, EstimatedPosition> estimatedPositions;
-
+//    private static  Triangle t1 = new Triangle(); //Use static triangles to save compute resources.. oops multithreading
 
     public PlayerPositionModel()
     {
@@ -97,36 +97,14 @@ public class PlayerPositionModel {
         double distanceC = Math.sqrt(Math.pow((posA.markerAbsoluteX - posB.markerAbsoluteX), 2) + Math.pow((posA.markerAbsoluteY - posB.markerAbsoluteY), 2));
         double distanceA = posB.distance;
         double distanceB = posA.distance;
+        Triangle t1 = new Triangle();
+        t1.sideA = distanceA;
+        t1.sideB = distanceB;
+        t1.sideC = distanceC;
+        t1.calculate();
 
-        // Triangle inequality theory can be broken with randomised lengths, so check for it.
-        // Just give up if no triangle can be made.
-        if ( distanceA + distanceB < distanceC ||
-             distanceA + distanceC < distanceB ||
-             distanceB + distanceC < distanceA) {
-            return null;
-        }
-
-
-
-        double distanceASquared = Math.pow(distanceA, 2);
-        double distanceBSquared = Math.pow(distanceB, 2);
-        double distanceCSquared = Math.pow(distanceC, 2);
-
-
-        // Use law of cosines c^2 = a^2 + b^2  - 2ab cos(C)
-        double angleA = Math.acos(
-                ( distanceBSquared + distanceCSquared - distanceASquared )
-                                     /
-                        (2 * distanceB * distanceC)
-        );
-
-        double angleB = Math.acos(
-                ( distanceCSquared + distanceASquared - distanceBSquared )
-                                    /
-                        (2 * distanceC * distanceA)
-        );
-
-//        double angleC = Math.PI - (angleA + angleB);
+        double angleA = t1.angleA;
+        double angleB = t1.angleB;
         Point p = null;
         Point offset;
         if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
@@ -164,8 +142,14 @@ public class PlayerPositionModel {
             }
         } else {
               if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top left corner
-                  Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY
-                  offset = findOffsetPerpendicular(angleA, ,distanceB);
+                  t1.clear(); // Reuse to save resources!!!
+                  t1.sideA = posB.markerAbsoluteX;
+                  t1.sideB = Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY;
+                  t1.sideC = t1.sideCFromRightAngledTriangle();
+                  t1.calculate();
+                  offset = findOffsetPerpendicular(angleA, t1.angleA  ,distanceB);
+
+                  p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
               }
         }
 
@@ -180,6 +164,7 @@ public class PlayerPositionModel {
 
     private Point findOffsetParallel(double angleA, double angleB, double distanceA, double distanceB, double distanceC)
     {
+        //ERROR
         double yOffset, xOffset;
         if (angleA > Math.PI/2){ //Case 1
             yOffset = Math.sin(Math.PI - angleA) * distanceB;
@@ -304,8 +289,24 @@ class Triangle {
     public double angleC = 0;
 
 
+    // Have side A and B? Are RA triagnle? Use this method
+    public double sideCFromRightAngledTriangle()
+    {
+        sideC = Math.sqrt(Math.pow(sideA,2) + Math.pow(sideB, 2));
+        return sideC;
+    }
 
-    public boolean caculate()
+    public void clear()
+    {
+        sideC = 0;
+        sideA = 0;
+        sideB = 0;
+        angleA = 0;
+        angleB = 0;
+        angleC = 0;
+    }
+
+    public boolean calculate()
     {
         if (canMakeTriangle()) {
             return false; // Need at least 3 parts to calculate
@@ -367,7 +368,7 @@ class Triangle {
             }
 
         }
-        // 
+        //
 
         return false;
     }
