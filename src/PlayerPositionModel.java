@@ -198,7 +198,7 @@ public class PlayerPositionModel {
             }
 
 
-            if (angleA == Double.NaN){
+            if (p != null && (p.x == Double.NaN || p.y == Double.NaN)){
                 int j = 0;
             }
         }
@@ -358,7 +358,7 @@ class Triangle {
 
     public boolean calculate()
     {
-        if (canMakeTriangle()) {
+        if (!canMakeTriangle()) {
             return false; // Need at least 3 parts to calculate
         }
         // Triangle inequality theory can be broken with randomised lengths, so check for it.
@@ -425,7 +425,7 @@ class Triangle {
 
     private boolean canMakeTriangle()
     {
-        return ! (numSides() == 0 || numValues() < 3);
+        return !(numSides() == 0 || numValues() < 3);
     }
 
     private int numValues()
