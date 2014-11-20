@@ -101,62 +101,108 @@ public class PlayerPositionModel {
         t1.sideA = distanceA;
         t1.sideB = distanceB;
         t1.sideC = distanceC;
-        t1.calculate();
-
-        double angleA = t1.angleA;
-        double angleB = t1.angleB;
         Point p = null;
-        Point offset;
-        if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
+        if (t1.calculate()) { // If we can make a triangle
 
-            // If points are on the same x line we have all we need
-            if (posA.markerAbsoluteX == posB.markerAbsoluteX) {
-                if (posA.markerAbsoluteY > posB.markerAbsoluteY) {
-                    //swap
-                    offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
-                } else {
-                    offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
-                }
+            double angleA = t1.angleA;
+            double angleB = t1.angleB;
+            Point offset = null;
+            if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
 
-                if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH) { //Top line
-                    p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x);
+                // If points are on the same x line we have all we need
+                if (posA.markerAbsoluteX == posB.markerAbsoluteX) {
+                    if (posA.markerAbsoluteY > posB.markerAbsoluteY) {
+                        //swap
+                        offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
+                    } else {
+                        offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
+                    }
+
+                    if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH) { //Top line
+                        p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x);
+                    }
+                    if (posA.markerAbsoluteX == 0) { //Bottom line
+                        p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
+                    }
+                    //TODO case where on center line
                 }
-                if (posA.markerAbsoluteX == 0) { //Bottom line
-                    p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
+                if (posA.markerAbsoluteY == posB.markerAbsoluteY) {
+                    if (posA.markerAbsoluteX > posB.markerAbsoluteX) {
+                        //swap
+                        offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
+                    } else {
+                        offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
+                    }
+                    if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top line
+                        p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
+                    }
+                    if (posA.markerAbsoluteY == 0) { //Bottom line
+                        p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
+                    }
                 }
-                //TODO case where on center line
+            } else {
+                for (int i = 0; i < 1; i++){ //Easy way to skip code when break
+                    //Top left corner
+                    if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT) {
+                        offset = findOffsetPerpendicular(angleA, posB.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY, distanceB);
+                    }
+                    if (posB.markerAbsoluteX == 0 && posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) {
+                        //swap
+                        offset = findOffsetPerpendicular(angleB, posA.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posB.markerAbsoluteY, distanceA);
+                    }
+                    if (offset != null) {
+                        p = new Point(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x);
+                        break;
+                    }
+
+                    //Bottom left
+                    if (posB.markerAbsoluteX == 0 && posA.markerAbsoluteY == 0) {
+                        offset = findOffsetPerpendicular(angleA, posB.markerAbsoluteY, posA.markerAbsoluteX, distanceB);
+                    }
+                    if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == 0) {
+                        //swap
+                        offset = findOffsetPerpendicular(angleB, posA.markerAbsoluteY, posB.markerAbsoluteX, distanceA);
+                    }
+
+                    if (offset != null) {
+                        p = new Point(posA.markerAbsoluteX - offset.x, posA.markerAbsoluteY + offset.y);
+                        break;
+                    }
+
+                    //Bottom right
+                    if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH && posB.markerAbsoluteY == 0) {
+                        offset = findOffsetPerpendicular(angleA, Player.BOUNDARY_WIDTH - posB.markerAbsoluteX, posA.markerAbsoluteY, distanceB);
+                    }
+                    if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_WIDTH) {
+                        //swap
+                        offset = findOffsetPerpendicular(angleB, Player.BOUNDARY_WIDTH - posA.markerAbsoluteX, posB.markerAbsoluteY, distanceA);
+                    }
+
+                    if (offset != null) {
+                        p = new Point(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY - offset.x);
+                        break;
+                    }
+                    //Top right
+                    if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT && posB.markerAbsoluteY == Player.BOUNDARY_WIDTH) {
+                        offset = findOffsetPerpendicular(angleA, Player.BOUNDARY_WIDTH - posA.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posB.markerAbsoluteY, distanceB);
+                    }
+                    if (posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT && posA.markerAbsoluteY == Player.BOUNDARY_WIDTH) {
+                        //swap
+                        offset = findOffsetPerpendicular(angleB, Player.BOUNDARY_WIDTH - posB.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY, distanceA);
+                    }
+                    if (offset != null) {
+                        p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
+                        break;
+                    }
+                }
             }
-            if (posA.markerAbsoluteY == posB.markerAbsoluteY) {
-                if (posA.markerAbsoluteX > posB.markerAbsoluteX) {
-                    //swap
-                    offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
-                } else {
-                    offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
-                }
-                if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top line
-                    p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y);
-                }
-                if (posA.markerAbsoluteY == 0) { //Bottom line
-                    p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
-                }
-            }
-        } else {
-              if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top left corner
-                  t1.clear(); // Reuse to save resources!!!
-                  t1.sideA = posB.markerAbsoluteX;
-                  t1.sideB = Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY;
-                  t1.sideC = t1.sideCFromRightAngledTriangle();
-                  t1.calculate();
-                  offset = findOffsetPerpendicular(angleA, t1.angleA  ,distanceB);
 
-                  p = new Point(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y);
-              }
+
+            if (angleA == Double.NaN){
+                int j = 0;
+            }
         }
 
-
-        if (angleA == Double.NaN){
-            int j = 0;
-        }
         return p;
 
     }
@@ -179,16 +225,20 @@ public class PlayerPositionModel {
         return new Point(xOffset, yOffset);
     }
 
-    private Point findOffsetPerpendicular(double angleA, double angleX, double distanceB)
+    private Point findOffsetPerpendicular(double angleA, double sideO, double sideP, double distanceB)
     {
-
+        Triangle t2 = new Triangle();
+        t2.sideA = sideO;
+        t2.sideB = sideP;
+        t2.sideC = t2.sideCFromRightAngledTriangle();
+        t2.calculate();
         double yOffset, xOffset;
-        if (angleA + angleX < Math.PI/2) { // Case 1
-            double angleY = Math.PI - (angleA + angleX);
+        if (angleA + t2.angleA < Math.PI/2) { // Case 1
+            double angleY = Math.PI - (angleA + t2.angleA);
             yOffset = Math.sin(angleY) * distanceB;
             xOffset = Math.cos(angleY) * distanceB;
         } else { // Case 2
-            double angleY = Math.PI - (angleA + angleX);
+            double angleY = Math.PI - (angleA + t2.angleA);
             yOffset = -Math.sin(angleY) * distanceB;
             xOffset = Math.cos(angleY) * distanceB;
         }
