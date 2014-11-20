@@ -80,10 +80,6 @@ public class Striker extends Player {
         }
     }
 
-    protected void ballNotVisibleAction()
-    {
-        moveToHoldingPosition();
-    }
 
     protected void moveToHoldingPosition()
     {

@@ -9,7 +9,7 @@ import java.util.Map;
  */
 public class PlayerPositionModel {
 
-
+    private static final double MAX_REASONABLE_VIEWABLE_DISTANCE = 100.0;
 
     private HashMap<String,Point> lastKnownPositions;
     private HashMap<String,Point> knownPositions;
@@ -88,7 +88,9 @@ public class PlayerPositionModel {
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
-        int i = 0;
+        if (estimatedPositions.size() > 6){
+            int i = 0;
+        }
 
     }
 
@@ -96,19 +98,30 @@ public class PlayerPositionModel {
     {
         //First find the distance between the two known points.
         double distanceC = Math.sqrt(Math.pow((posA.markerAbsoluteX - posB.markerAbsoluteX), 2) + Math.pow((posA.markerAbsoluteY - posB.markerAbsoluteY), 2));
-
-        //Use smallest distance for least error.?
-
-        // Use law of cosines c^2 = a^2 + b^2  - 2ab cos(C)
         double distanceA = posB.distance;
         double distanceB = posA.distance;
+
+        // Triangle inequality theory can be broken with randomised lengths, so check for it.
+        // Just give up if no triangle can be made.
+        if ( distanceA + distanceB < distanceC ||
+             distanceA + distanceC < distanceB ||
+             distanceB + distanceC < distanceA) {
+            return null;
+        }
+
+
+        if (distanceA > MAX_REASONABLE_VIEWABLE_DISTANCE ||
+            distanceB > MAX_REASONABLE_VIEWABLE_DISTANCE) {
+            return null;
+        }
+
 
         double distanceASquared = Math.pow(distanceA, 2);
         double distanceBSquared = Math.pow(distanceB, 2);
         double distanceCSquared = Math.pow(distanceC, 2);
 
 
-
+        // Use law of cosines c^2 = a^2 + b^2  - 2ab cos(C)
         double angleA = Math.acos(
                 ( distanceBSquared + distanceCSquared - distanceASquared )
                                      /
@@ -117,7 +130,7 @@ public class PlayerPositionModel {
 
         double angleB = Math.acos(
                 ( distanceCSquared + distanceASquared - distanceBSquared )
-                        /
+                                    /
                         (2 * distanceC * distanceA)
         );
 
@@ -160,9 +173,8 @@ public class PlayerPositionModel {
         }
         //TODO case where on same x line. case where two different lines
 
-
-        if (p != null && p.x == Double.NaN) {
-            int i = 6;
+        if (angleA == Double.NaN){
+            int j = 0;
         }
         return p;
 

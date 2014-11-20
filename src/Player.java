@@ -11,8 +11,10 @@ import java.util.Random;
  */
 public abstract class Player implements ControllerPlayer {
 
-    public static final int PITCH_BOUNDARY_X_WIDTH = 110,
-            PITCH_BOUNDARY_Y_WIDTH = 70;
+    public static final int PITCH_BOUNDARY_X_WIDTH = 114,
+            PITCH_BOUNDARY_Y_WIDTH = 70,
+            PENALTY_DISTANCE_FROM_CENTER = 43,
+            DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5;
     /**
      * Define a constant for each player position for readability.
      */
@@ -32,7 +34,8 @@ public abstract class Player implements ControllerPlayer {
             BALL_VERY_CLOSE = 2,
             BALL_CLOSE = 15,
             STRIKER_SHOOTING_RANGE = 10.0,
-            MIDFIELDER_SHOOTING_RANGE = 20.0;
+            MIDFIELDER_SHOOTING_RANGE = 20.0,
+            TOTAL_GAME_TICKS = 3000.0;
 
     protected static final int DRIBBLE_POWER = 6,
             LONG_DRIBBLE_POWER = 6,
@@ -48,7 +51,7 @@ public abstract class Player implements ControllerPlayer {
      *
      * Because we are using two sets of these players we need an aggression factor for each team.
      */
-    private static int aggression = 50, goalsOwn = 0, goalsOther = 0;
+    private static int aggression = 50, goalsOwn = 0, goalsOther = 0, tickCount = 0;
 
 
 
@@ -64,7 +67,8 @@ public abstract class Player implements ControllerPlayer {
             distanceClosestForwardOtherPlayer = -1,
             directionClosestForwardOtherPlayer = -1,
             ownGoalTurn,
-            otherGoalTurn;
+            otherGoalTurn,
+            playerRemainingStamina = 0;
 
     protected boolean canSeeOwnGoal = false,
             canSeeGoalLeft = false,
@@ -75,7 +79,8 @@ public abstract class Player implements ControllerPlayer {
             canSeeOtherGoal = false,
             canSeeOwnPenalty = false,
             needsToRetreat = false,
-            haveSeenSomeMarker = true;
+            haveSeenSomeMarker = true,
+            inHoldingPosition = false;
 
     protected ActionsPlayer player;
     protected Random random        = null;
@@ -123,6 +128,7 @@ public abstract class Player implements ControllerPlayer {
         ownGoalTurn = 0.0;
         if (getPlayer().getNumber() == 1) {
             playerPositionModel.clearModel();
+            tickCount++;
         }
 
     }
@@ -131,8 +137,19 @@ public abstract class Player implements ControllerPlayer {
     protected abstract void ballIsVeryCloseAction();
     protected abstract void ballIsCloseAction();
     protected abstract void ballIsFarAction();
-    protected abstract void ballNotVisibleAction();
+    protected void ballNotVisibleAction()
+    {
+        if (inHoldingPosition) {
+            lookAround();
+        }else {
+            moveToHoldingPosition();
+        }
+    }
     protected abstract void moveToHoldingPosition();
+    protected void lookAround()
+    {
+
+    }
 
     protected boolean areNoCloseForwardPlayers()
     {
@@ -164,6 +181,11 @@ public abstract class Player implements ControllerPlayer {
     protected boolean isBallOwnGoalSideOfPlayer()
     {
         return true;
+    }
+
+    protected static double halfProgress()
+    {
+        return tickCount/TOTAL_GAME_TICKS;
     }
 
 
@@ -298,20 +320,29 @@ public abstract class Player implements ControllerPlayer {
 
     /** {@inheritDoc} */
 
+    protected int staminaBoost(int initialPower)
+    {
+        double usableStamina = (playerRemainingStamina * Player.halfProgress());
+        return (int)(usableStamina / (TOTAL_GAME_TICKS-tickCount)) + initialPower;
+    }
+
 
     protected int dashValueVeryFast()
     {
-        return getAggression() + 50;
+        int initialPower = getAggression() + 50;
+        return staminaBoost(initialPower);
     }
 
     protected int dashValueFast()
     {
-        return getAggression() + 10;
+        int initialPower = getAggression() + 10;
+        return staminaBoost(initialPower);
     }
 
     protected int dashValueSlow()
     {
-        return getAggression() - 30;
+        int initialPower = getAggression() - 30;
+        return staminaBoost(initialPower);
     }
 
 
@@ -406,7 +437,10 @@ public abstract class Player implements ControllerPlayer {
     public void infoSenseBody(ViewQuality viewQuality, ViewAngle viewAngle, double stamina, double unknown,
                               double effort, double speedAmount, double speedDirection, double headAngle,
                               int kickCount, int dashCount, int turnCount, int sayCount, int turnNeckCount,
-                              int catchCount, int moveCount, int changeViewCount) {}
+                              int catchCount, int moveCount, int changeViewCount)
+    {
+        this.playerRemainingStamina = stamina;
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -536,7 +570,7 @@ public abstract class Player implements ControllerPlayer {
                 multiple = 1;
                 break;
         }
-        int flagY = multiple * ((PITCH_BOUNDARY_Y_WIDTH-10)/2);
+        int flagY = multiple * ((PITCH_BOUNDARY_Y_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2);
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance); //TODO distance could be negative
@@ -548,8 +582,8 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagCornerOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
                                      double bodyFacingDirection, double headFacingDirection)
     {
-        int flagX = -(PITCH_BOUNDARY_X_WIDTH-10)/2;
-        int flagY = (PITCH_BOUNDARY_Y_WIDTH-10)/2 * (flag == Flag.LEFT ? -1 : 1);
+        int flagX = -(PITCH_BOUNDARY_X_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
+        int flagY = (PITCH_BOUNDARY_Y_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -561,8 +595,8 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagCornerOther(Flag flag, double distance, double direction, double distChange,
                                        double dirChange, double bodyFacingDirection, double headFacingDirection)
     {
-        int flagX = (PITCH_BOUNDARY_X_WIDTH-10)/2;
-        int flagY = (PITCH_BOUNDARY_Y_WIDTH-10)/2 * (flag == Flag.LEFT ? -1 : 1);
+        int flagX = (PITCH_BOUNDARY_X_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
+        int flagY = (PITCH_BOUNDARY_Y_WIDTH-2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
             playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
@@ -574,7 +608,7 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagPenaltyOther(Flag flag, double distance, double direction, double distChange,
                                         double dirChange, double bodyFacingDirection, double headFacingDirection)
     {
-        int flagX = 43;
+        int flagX = PENALTY_DISTANCE_FROM_CENTER;
         int flagY = 0;
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
@@ -588,7 +622,7 @@ public abstract class Player implements ControllerPlayer {
                                       double dirChange, double bodyFacingDirection, double headFacingDirection)
     {
         canSeeOwnPenalty = true;
-        int flagX = -43;
+        int flagX = -PENALTY_DISTANCE_FROM_CENTER;
         int flagY = 0;
         if (haveSeenSomeMarker) {
             haveSeenSomeMarker = true;
