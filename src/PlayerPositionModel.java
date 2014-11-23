@@ -93,7 +93,11 @@ public class PlayerPositionModel {
         if (estimatedPositions.size() > 6){
             int i = 0;
         }
+    }
 
+    public EstimatedPosition estimatedPlayerPosition(int playerNumber)
+    {
+        return estimatedPositions.get(playerNumber);
     }
 
     private double angleCWithPointAndADist(Point point, double distanceA)
@@ -318,6 +322,7 @@ public class PlayerPositionModel {
         return new Point(xOffset, yOffset);
     }
 
+    
 
  }
 
@@ -381,6 +386,12 @@ class Point {
         this.x = x;
         this.y = y;
     }
+    
+    
+    public double distanceFromPoint(Point p) 
+    {
+        return Math.sqrt(Math.pow(x-p.x,2) + Math.pow(y-p.y,2));  
+    }
 }
 
 // LEFT is 0 degrees...
@@ -410,6 +421,66 @@ class EstimatedPosition {
         x = 0;
         y = 0;
         this.identifier = identifier;
+    }
+}
+
+class Circle {
+    
+    public double radius;
+    public Point center;
+    
+    
+    public ArrayList<Point> findIntersectionWithCircle(Circle circle2)
+    {
+        //Calculate distance between centres of circle
+        ArrayList<Point> points = new ArrayList<Point>();
+        double distanceBetweenCenters = center.distanceFromPoint(circle2.center);
+  
+        double m = radius + circle2.radius;
+        double n = radius - circle2.radius;
+
+        if (n < 0) {
+            n = n * -1;
+        }
+        
+        //No intersection
+        if (distanceBetweenCenters > m) {
+            return  points;
+        }
+         
+
+        //Circle are contained within each other
+        if (distanceBetweenCenters < n){
+            return  points;
+        }
+        
+        //Circles are the same
+        if (distanceBetweenCenters == 0 && radius == circle2.radius){
+            return  points;
+        }
+
+        double a = (Math.pow(radius,2) - Math.pow(circle2.radius, 2) + Math.pow(distanceBetweenCenters,2) / (2 * distanceBetweenCenters);
+        double h = Math.sqrt(radius * radius - a * a);
+
+        //Calculate point p, where the line through the circle intersection points crosses the line between the circle centers.  
+        Point p = new Point(center.x + (a /distanceBetweenCenters) * (circle2.center.x -center.x),
+                            center.y + (a /distanceBetweenCenters) * (circle2.center.y -center.y));
+        points.add(p);
+
+        if (distanceBetweenCenters== radius + circle2.radius) {
+            return points;
+        }
+
+        Point p1 = new Point(p.x + (h /distanceBetweenCenters) * (circle2.center.y - center.y),
+                             p.y - (h /distanceBetweenCenters) * (circle2.center.x - center.x));
+
+        Point p2 = new Point(p.x - (h /distanceBetweenCenters) * (circle2.center.y - center.y),
+                             p.y + ( h /distanceBetweenCenters) * (circle2.center.x - center.x));
+
+        points.clear();
+        points.add(p1);
+        points.add(p2);
+        return points;
     }
 }
 

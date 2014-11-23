@@ -87,13 +87,12 @@ public class Striker extends Player {
         int position = getAggression()/2 - 25 + ballPositionOffset;
         switch (getPlayer().getNumber()) {
             case CENTER_RIGHT_FORWARD:
-                getPlayer().move(position, 10);
+                moveToPosition(position, 10);
                 break;
             case CENTER_LEFT_FORWARD:
-                getPlayer().move(position, -10);
+                moveToPosition(position, -10);
                 break;
         }
-        getPlayer().dash(dashValueSlow());
     }
 
 }

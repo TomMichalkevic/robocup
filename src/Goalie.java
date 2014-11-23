@@ -88,7 +88,7 @@ public class Goalie extends Player {
     protected void moveToHoldingPosition()
     {
         //Goal stays in position regardless of aggression
-        getPlayer().move(-50, 0);
+        moveToPosition(-50, 0);
     }
 
 
