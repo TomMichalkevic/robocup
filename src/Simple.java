@@ -1,36 +1,23 @@
-/* IN2001 - Artificial Intelligence - Coursework 1 - Mayur Patel, Liam Lowe, James Grant, David Charles - Questions & Answers
+/* IN2001 - Artificial Intelligence - Coursework 1 - Chris Mitchelmore, Tomas Michalkevic - PEAS
 
-Q1. What are your RoboCup Agent's Task Environment and its properties?
-A1.     Agent Type: Football Player
-        Performance Measure: Can successfully score a goal against the opposing team, can successfully defend against an opposing team's attempt to score a goal
-        Environment: Virtual football field
-        Actuators:  Virtual player movement on field. Virtual player interaction with football. Virtual player interaction with other players, referee and coach.
-        Sensors: Visible virtual flag locations. Virtual ability to hear other players, coach and referee. Virtual visibility of player locations and ball location. 
+Robocup Task Environment
+Agent type: Soccer player
+Performance measure: Can succeed in scoring a goal against an opposing team. Can also defend against the opposing team and prevent them from scoring a goal.
+Environment: 2D soccer field.
+Actuators: Agent’s movement on the field and its interaction with the ball. Agent’s interaction with other players, referee and a coach.
+Sensors: Virtual flag locations and ability to her other players, coach and the referee. Ability to see player locations and the location of the ball.
 
-        Properties of the task environment:
-            - Partially observable: Players can only see the loaction of the ball once it is within a visible distance, this means that players that are not within
-              this distance are operating under partially observable state, they must then continue to operate using other available sensor data such as flag and goal locations.
-            - Multi-agent: The players on the team must work together in order to score a goal and to stop the opposition from scoring. At the very least there are 4 agents on 
-              the team; Goalkeeper, Defender, Midfielder, Striker.
-            - Stochastic: The environment itself is stochastic in nature as there is no way to calculate the behaviour of the opposing team reliably. The only option is for our agents to 
-              react to what the other agents on the field are doing at any given moment.
-            - Episodic: The agents must treat each game as an episodic expereince, as the game does not end after each agent has performed an action to an individual percept. The agent must 
-              be able to continuously react to changing percepts and perform between 0 and an unknown amount of actions. For example, a striker may see the ball infront of him and then be 
-              expected to dribble the ball multiple times before attepmting to score, and then in the second game not receive the opportunity to touch the ball throughout the entire game. 
-            - Dynamic: The environment is constantly changing whether the agent performs an action or not. At the very least the opposition will be moving as well as the ball and the other 
-              agents of the same team. This requires our agents to quickly deliberate its percepts and perform an action.
-            - Continuous: Although the game itself is only played for a limited amount of time the agents themselves are expected to perform continuously throughout this entire period. Within 
-              this limit time can also be paused with the addition of penalties, free kicks, fouls/injuries and reprimands (being sent off), all of this actions could potentially stop an agent 
-              before the time limit of the entire match. Furthermore the continuous changing nature of the percepts avialable to the agent also prove a continuous nature of the game.
-            - Known: The laws of physics apply simply to the game, applying a kicking force to the ball will move it. Running in a given direction will advance the agent in that direction, 
-              the outcomes to these actions can be perdetermined easily.
+Properties of the task environment:
+Partially observable: the agents can only see the ball if the distance between the player and the ball is under the maximum visibility distance, otherwise they have to operate using other sensor data such as flags and goal locations.
+Multi-agent: All the players in a team have to work together to achieve the mutual goal of scoring a goal and stopping the other team from doing the same. There are at least 4 distinct agents on each team: goalkeeper, midfielder, defender, and striker.
+Stochastic: The environment is stochastic because there is no way to determine the behavior of the players in the other team reliably. The only option is to react to actions of the other team real-time.
+Episodic: This is because the actions taken in each previous game do not affect the actions taken in the current or future games.
+Dynamic: The state of the environment is constantly changing regardless whether an agent performs an action or not. The positions of the players and the ball on the field constantly change.
+Continuous: Agents have to cooperate with other players on the field
+Known: Ordinary laws of physics are applied to the environment. Players can move in different directions and a ball can be kicked which will go in the given directions and then slowly stop.
 
-Q2. Is your RoboCup Agent Simple Reflex, Model based, Goal based, Utility based or a Learning agent ? Explain why ?
-A2. Our agents are simple reflex agents. They have been coded to perform a specific action based on a specifc input using basic if statements. For example, if the player can see the ball it 
-will perform the actions given in the former of the if statement, if it cannot, it wil perform the latter. We have coded if statements for as many possible situations that we can assume
-will occur. Furthermore the players keep to recollection of their previous actions, this means that each desicion is not based on what the agent just did, like a simple reflex agents. 
-Using a switch statement we can define which players should respond to which actions, for example if a defender see's the ball they will take control and pass it to a team mate, if the striker
-sees the ball they will move toward the opponent goal and shoot. This also allows us to apply a blanket action should none of the if statements apply.
+The agents coded are simple reflex agents who perform actions at a given time based on if statements.
+
 
 */
 
@@ -57,7 +44,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * @author Team WeCouldn'tThinkOfOne
+ * @author Team Turing Autonoma
  */
 public class Simple implements ControllerPlayer {
     private static int    count         = 0;
