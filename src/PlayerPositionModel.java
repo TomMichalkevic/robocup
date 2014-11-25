@@ -1,5 +1,3 @@
-import javafx.geometry.Side;
-
 import java.util.*;
 
 /**
@@ -100,10 +98,45 @@ public class PlayerPositionModel {
 
 
     /**
+     * Filter the list of estimated positions with the given parameters.
+     * @param p Player (controller player abstract subclass)
+     * @param type 0 = all, 1 = own team, 2 = other team, 3 = ball
+     * @param xGreaterThan absolute x position should be greater than (pitch axis) Use -Player.LARGE_DISTANCE for all
+     * @param yGreaterThan absolute y position should be greater than (pitch axis) Use -Player.LARGE_DISTANCE for all
+     * @param xLessThan absolute x position should be less than (pitch axis) Use Player.LARGE_DISTANCE for all
+     * @param yLessThan absolute y position should be less than (pitch axis) Use Player.LARGE_DISTANCE for all
+     * @param maxDistance the maximum distance from the given player use Player.LARGE_DISTANCE for all
+     * @param minDistance the minimum distance from the given player use 0 for all
+     * @return A filtered array list of positions
+     */
+    public ArrayList<EstimatedPosition> filterObjects(Player p, int type, double xGreaterThan, double yGreaterThan, double xLessThan, double yLessThan, double maxDistance, double minDistance)
+    {
+        ArrayList<EstimatedPosition> filteredObjects = new ArrayList<EstimatedPosition>();
+        for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
+            int identifier = entry.getKey();
+            int playerNumber = p.getPlayer().getNumber();
+            if (playerNumber != identifier) {
+                if (type == 0 || (identifier == 0 && type == 3) || (identifier < 0 && type == 2) || (identifier > 0 && type == 1)) {
+                    EstimatedPosition position = entry.getValue();
+                    if (position.x > xGreaterThan && position.y > yGreaterThan && position.x < xLessThan && position.y < yLessThan) {
+                        EstimatedPosition player = estimatedPlayerPosition(playerNumber);
+                        double distance = Math.sqrt(Math.pow(position.x - player.x,2) + Math.pow(position.y - player.y, 2));
+                        if (distance < maxDistance && distance > minDistance) {
+                            filteredObjects.add(position);
+                        }
+                    }
+                }
+            }
+        }
+        return filteredObjects;
+    }
+
+
+    /**
      * Initiates the calculations to be done using the current sense set.
      * This should only be called ONCE per tick.
      * Use the shared instance of this class to access estimated positions
-     * @explanation
+     *
      * Loop through each position of fixed points we have for each player.
      * Calculate the position of the player based on every point combined with each other.
      * Positions are calculated using circular intersection.
@@ -145,6 +178,18 @@ public class PlayerPositionModel {
     public EstimatedPosition estimatedPlayerPosition(int playerNumber)
     {
         return estimatedPositions.get(playerNumber);
+    }
+
+
+    /**
+     * Must be called after we have player positions
+     */
+    private void findTheBall()
+    {
+        ArrayList<EstimatedPosition> filteredObjects = new ArrayList<EstimatedPosition>();
+        for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
+            //get player get ball and calculate position
+        }
     }
 
 
@@ -283,25 +328,30 @@ class ObjectRelativePosition {
             RELATION_BALL = 3;
     
     
-    public int fromValue;
+    public int fromIdentifier;
     public int relation;
-    public int toValue;
+    public int toIdentifier;
     
     public double direction;
     public double distance;
     
-    public ObjectRelativePosition(int relation, int fromValue, int toValue, double direction, double distance)
+    public ObjectRelativePosition(int relation, int fromIdentifier, int toIdentifier, double direction, double distance)
     {
         this.relation = relation;
-        this.fromValue = fromValue;
-        this.toValue = toValue;
+        this.fromIdentifier = fromIdentifier;
+        this.toIdentifier = toIdentifier;
         this.direction = direction;
         this.distance = distance;
     }
     
     public int hashCode()
     {
-        return fromValue * 1000 + toValue * 10 + relation;
+        return fromIdentifier * 1000 + toIdentifier * 10 + relation;
+    }
+
+    public int codeFor(int fromIdentifier, int toIdentifier, int relation)
+    {
+        return fromIdentifier * 1000 + toIdentifier * 10 + relation;
     }
     
 }
