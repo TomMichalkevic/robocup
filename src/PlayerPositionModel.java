@@ -1,8 +1,6 @@
 import javafx.geometry.Side;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by cmitchelmore on 16/11/14.
@@ -69,24 +67,33 @@ public class PlayerPositionModel {
         for (Map.Entry<Integer, ArrayList<ObjectAbsolutePosition>> entry : absolute.entrySet()) {
             EstimatedPosition estimatedPosition = new EstimatedPosition(entry.getKey());
             ArrayList<ObjectAbsolutePosition> absolutes = entry.getValue();
+            ArrayList<DirectedPoint> possiblePoints = new ArrayList<DirectedPoint>();
             for (int i = 0; i < absolutes.size()-1; i++) {
                 for (int j = i+1; j < absolutes.size(); j++) {
-                    DirectedPoint p = triangulate(absolutes.get(i), absolutes.get(j));
-                    if (p != null){
-                        estimatedPosition.x += p.x;
-                        estimatedPosition.y += p.y;
-                        estimatedPosition.absoluteDirection += p.direction;
-                        estimatedPosition.numberPoints++;
-                    }
+//                    DirectedPoint p = triangulate(absolutes.get(i), absolutes.get(j));
+                    possiblePoints.addAll(circleBasedTriangulation(absolutes.get(i), absolutes.get(j)));
+
+//                    if (p != null){
+//                        estimatedPosition.x += p.x;
+//                        estimatedPosition.y += p.y;
+//                        estimatedPosition.absoluteDirection += p.direction;
+//                        estimatedPosition.numberPoints++;
+//                    }
                 }
             }
-            if (estimatedPosition.numberPoints > 0) {
-                estimatedPosition.x /= estimatedPosition.numberPoints;
-                estimatedPosition.y /= estimatedPosition.numberPoints;
-                estimatedPosition.absoluteDirection /= estimatedPosition.numberPoints;
-                estimatedPosition.y -= Player.BOUNDARY_HEIGHT /2;
-                estimatedPosition.x -= Player.BOUNDARY_WIDTH /2;
-                estimatedPosition.absoluteDirection = Math.toDegrees(estimatedPosition.absoluteDirection);
+
+            if (possiblePoints.size() > 0) {
+                DirectedPoint pos = processPoints(possiblePoints);
+//                estimatedPosition.x /= estimatedPosition.numberPoints;
+//                estimatedPosition.y /= estimatedPosition.numberPoints;
+//                estimatedPosition.absoluteDirection /= estimatedPosition.numberPoints;
+//                estimatedPosition.y -= Player.BOUNDARY_HEIGHT /2;
+//                estimatedPosition.x -= Player.BOUNDARY_WIDTH /2;
+                estimatedPosition.x = pos.x - Player.BOUNDARY_WIDTH/2;
+                estimatedPosition.y = (pos.y - Player.BOUNDARY_HEIGHT/2) * -1; //Correction for reversed lines
+//                estimatedPosition.absoluteDirection = Math.toDegrees(estimatedPosition.absoluteDirection);
+                estimatedPosition.absoluteDirection = Math.toDegrees(pos.direction) % 360;
+                estimatedPosition.absoluteDirection = estimatedPosition.absoluteDirection < 0 ? estimatedPosition.absoluteDirection+360 : estimatedPosition.absoluteDirection;
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
@@ -144,6 +151,65 @@ public class PlayerPositionModel {
                 break;
         }
         return pDir;
+    }
+
+    private DirectedPoint processPoints(ArrayList<DirectedPoint> remainingPoints)
+    {
+
+        Collections.sort(remainingPoints, new PointXComparator());
+        int cut = remainingPoints.size()/10;
+        remainingPoints = new ArrayList<DirectedPoint>(remainingPoints.subList(cut, remainingPoints.size()-cut));
+        Collections.sort(remainingPoints, new PointYComparator());
+        remainingPoints = new ArrayList<DirectedPoint>(remainingPoints.subList(cut, remainingPoints.size()-cut));
+        Collections.sort(remainingPoints, new PointDirectionComparator());
+        remainingPoints = new ArrayList<DirectedPoint>(remainingPoints.subList(cut, remainingPoints.size()-cut));
+        double xTotal = 0;
+        double yTotal = 0;
+        double cosT = 0;
+        double sinT = 0;
+
+        for (DirectedPoint p : remainingPoints) {
+            xTotal+=p.x;
+            yTotal+=p.y;
+            cosT += Math.cos(p.direction);
+            sinT += Math.sin(p.direction);
+        }
+        return new DirectedPoint(xTotal/remainingPoints.size(), yTotal/remainingPoints.size(), Math.atan2(sinT, cosT));
+    }
+
+    private ArrayList<DirectedPoint> circleBasedTriangulation(ObjectAbsolutePosition posA, ObjectAbsolutePosition posB)
+    {
+        Circle a = new Circle(posA.markerAbsoluteX, posA.markerAbsoluteY, posA.distance);
+        Circle b = new Circle(posB.markerAbsoluteX, posB.markerAbsoluteY, posB.distance);
+        ArrayList<DirectedPoint> points = a.findIntersectionWithCircle(b);
+
+        Triangle t = new Triangle();
+        ArrayList<DirectedPoint> remainingPoints = new ArrayList<DirectedPoint>();
+
+        for (DirectedPoint p : points){
+            t.clear();
+            if (p.x >= 0 && p.y >= 0 && p.x <= Player.BOUNDARY_WIDTH && p.y <= Player.BOUNDARY_HEIGHT) {
+                double xDelta = posA.markerAbsoluteX - p.x;
+                double yDelta = posA.markerAbsoluteY - p.y;
+                t.sideA = Math.abs(xDelta);
+                t.sideB = Math.abs(yDelta);
+                t.sideC = posA.distance;
+                t.calculate();
+                double absoluteAngleFromPlayerToMarker;
+                if (xDelta > 0 && yDelta < 0) {// Case 1
+                    absoluteAngleFromPlayerToMarker = Math.PI + t.angleB;
+                }else if (xDelta > 0 && yDelta > 0) {// Case 2
+                    absoluteAngleFromPlayerToMarker = Math.PI - t.angleB;
+                }else if (xDelta < 0 && yDelta < 0) {// Case 3
+                    absoluteAngleFromPlayerToMarker = - t.angleB;
+                }else {// Case 4
+                    absoluteAngleFromPlayerToMarker = t.angleB;
+                }
+                p.direction = absoluteAngleFromPlayerToMarker - Math.toRadians(posA.direction); //If negative is counter clockwise
+                remainingPoints.add(p);
+            }
+        }
+        return remainingPoints;
     }
 
 
@@ -340,7 +406,7 @@ class ObjectAbsolutePosition {
     {
         //Lets convert to simple +xy axis when creating points
         this.markerAbsoluteX = markerAbsoluteX + Player.BOUNDARY_WIDTH /2;
-        this.markerAbsoluteY = markerAbsoluteY + Player.BOUNDARY_HEIGHT /2;
+        this.markerAbsoluteY = Player.BOUNDARY_HEIGHT - (markerAbsoluteY + Player.BOUNDARY_HEIGHT /2);
         this.number = number;
         this.direction = direction;
         this.distance = distance;
@@ -411,6 +477,8 @@ class EstimatedPosition {
     public double totalOffset;
     public double x;
     public double y;
+    public double x2;
+    public double y2;
     public double absoluteDirection;
 
     EstimatedPosition(int identifier)
@@ -424,16 +492,44 @@ class EstimatedPosition {
     }
 }
 
+class PointYComparator implements Comparator<Point> {
+    @Override
+    public int compare(Point o1, Point o2) {
+        return Double.compare(o1.y,o2.y);
+    }
+}
+
+class PointXComparator implements Comparator<Point> {
+    @Override
+    public int compare(Point o1, Point o2) {
+        return Double.compare(o1.x,o2.x);
+    }
+}
+
+class PointDirectionComparator implements Comparator<DirectedPoint> {
+    @Override
+    public int compare(DirectedPoint o1, DirectedPoint o2) {
+        return Double.compare(o1.direction,o2.direction);
+    }
+}
+
 class Circle {
     
     public double radius;
     public Point center;
     
-    
-    public ArrayList<Point> findIntersectionWithCircle(Circle circle2)
+
+    public Circle(double x, double y, double radius)
+    {
+        center = new Point(x,y);
+        this.radius = radius;
+    }
+
+
+    public ArrayList<DirectedPoint> findIntersectionWithCircle(Circle circle2)
     {
         //Calculate distance between centres of circle
-        ArrayList<Point> points = new ArrayList<Point>();
+        ArrayList<DirectedPoint> points = new ArrayList<DirectedPoint>();
         double distanceBetweenCenters = center.distanceFromPoint(circle2.center);
   
         double m = radius + circle2.radius;
@@ -447,7 +543,6 @@ class Circle {
         if (distanceBetweenCenters > m) {
             return  points;
         }
-         
 
         //Circle are contained within each other
         if (distanceBetweenCenters < n){
@@ -459,29 +554,30 @@ class Circle {
             return  points;
         }
 
-        double a = (Math.pow(radius,2) - Math.pow(circle2.radius, 2) + Math.pow(distanceBetweenCenters,2) / (2 * distanceBetweenCenters);
+        double a = (Math.pow(radius,2) - Math.pow(circle2.radius, 2) + Math.pow(distanceBetweenCenters,2)) / (2 * distanceBetweenCenters);
         double h = Math.sqrt(radius * radius - a * a);
 
-        //Calculate point p, where the line through the circle intersection points crosses the line between the circle centers.  
-        Point p = new Point(center.x + (a /distanceBetweenCenters) * (circle2.center.x -center.x),
-                            center.y + (a /distanceBetweenCenters) * (circle2.center.y -center.y));
+        //Calculate point p, where the line through the circle intersection points crosses the line between the circle centers.
+        DirectedPoint p = new DirectedPoint(center.x + (a /distanceBetweenCenters) * (circle2.center.x -center.x),
+                            center.y + (a /distanceBetweenCenters) * (circle2.center.y -center.y), 0);
         points.add(p);
 
         if (distanceBetweenCenters== radius + circle2.radius) {
             return points;
         }
 
-        Point p1 = new Point(p.x + (h /distanceBetweenCenters) * (circle2.center.y - center.y),
-                             p.y - (h /distanceBetweenCenters) * (circle2.center.x - center.x));
+        DirectedPoint p1 = new DirectedPoint(p.x + (h /distanceBetweenCenters) * (circle2.center.y - center.y),
+                             p.y - (h /distanceBetweenCenters) * (circle2.center.x - center.x), 0);
 
-        Point p2 = new Point(p.x - (h /distanceBetweenCenters) * (circle2.center.y - center.y),
-                             p.y + ( h /distanceBetweenCenters) * (circle2.center.x - center.x));
+        DirectedPoint p2 = new DirectedPoint(p.x - (h /distanceBetweenCenters) * (circle2.center.y - center.y),
+                             p.y + ( h /distanceBetweenCenters) * (circle2.center.x - center.x), 0);
 
         points.clear();
         points.add(p1);
         points.add(p2);
         return points;
     }
+
 }
 
 class Triangle {

@@ -11,8 +11,8 @@ import java.util.Random;
  */
 public abstract class Player implements ControllerPlayer {
 
-    public static final int BOUNDARY_WIDTH = 114,
-            BOUNDARY_HEIGHT = 70,
+    public static final int BOUNDARY_WIDTH = 115,
+            BOUNDARY_HEIGHT = 78,
             PENALTY_DISTANCE_FROM_CENTER = 43,
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5,
             HOLDING_POSITION_RADIUS = 5; //Hard to work out exactly where they are so allow some flexibility in reaching the position
@@ -144,7 +144,7 @@ public abstract class Player implements ControllerPlayer {
     protected abstract void moveToHoldingPosition();
     protected void lookAround()
     {
-        getPlayer().turn(90);
+       getPlayer().turn(45);
     }
 
     protected boolean areNoCloseForwardPlayers()
@@ -188,13 +188,13 @@ public abstract class Player implements ControllerPlayer {
     {
         EstimatedPosition estimatedPosition =  playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
         if (estimatedPosition == null){ // If we don't have a position move a random direction
-            getPlayer().turn(random.nextInt(360));
+            getPlayer().turn((random.nextInt(4)-2)*90);
             getPlayer().dash(dashValueSlow());
             return;
         }
         Triangle t = new Triangle();
-        double xDelta = estimatedPosition.x - x;
-        double yDelta = estimatedPosition.y - y;
+        double xDelta = x - estimatedPosition.x;
+        double yDelta = y - estimatedPosition.y;
         t.sideA = Math.abs(xDelta);
         t.sideB = Math.abs(yDelta);
         double distance = t.sideCFromRightAngledTriangle();
@@ -205,16 +205,17 @@ public abstract class Player implements ControllerPlayer {
 
             double absoluteTargetAngle;
 
-            if (xDelta < 0 && yDelta > 0) {// Case 1 (down and right from player)
-                absoluteTargetAngle = Math.PI + t.angleB;
-            }else if (xDelta > 0 && yDelta > 0) {// Case 2 (down and left from player)
-                absoluteTargetAngle = -t.angleB;
-            }else if (xDelta > 0 && yDelta < 0) {// Case 3 (up and left from player)
-                absoluteTargetAngle = t.angleB;
-            }else {// Case 4 (up and right from player)
-                absoluteTargetAngle = Math.PI - t.angleB;
+            if (xDelta < 0 && yDelta < 0) {// Case 1
+                absoluteTargetAngle = Math.PI/2 - t.angleA;
+            }else if (xDelta > 0 && yDelta < 0) {// Case 2
+                absoluteTargetAngle = Math.PI/2 + t.angleA;
+            }else if (xDelta > 0 && yDelta > 0) {// Case 3
+                absoluteTargetAngle = 3*Math.PI/2 - t.angleA;
+            }else {// Case 4
+                absoluteTargetAngle = 3*Math.PI/2 + t.angleA;
             }
             double absoluteTargetAngleDegrees = Math.toDegrees(absoluteTargetAngle) % 360;
+            absoluteTargetAngleDegrees = absoluteTargetAngleDegrees < 0 ? absoluteTargetAngleDegrees + 360 : absoluteTargetAngleDegrees;
             double relativePlayerAngle = absoluteTargetAngleDegrees  - estimatedPosition.absoluteDirection;
             getPlayer().turn(relativePlayerAngle);
             getPlayer().dash(dashValueSlow());
@@ -578,12 +579,11 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
                                double bodyFacingDirection, double headFacingDirection)
     {
+        //Flags from behind our own goal. X constant, Y changes
         int flagY = flagToY(flag);
-        int flagX = -BOUNDARY_WIDTH /2;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        int flagX = -BOUNDARY_WIDTH/2;
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
+
         canSeeFieldEnd = true;
     }
 
@@ -761,13 +761,13 @@ public abstract class Player implements ControllerPlayer {
                 y = 30;
                 break;
             case LEFT_10:
-                y = 10;
+                y = -10;
                 break;
             case LEFT_20:
-                y = 20;
+                y = -20;
                 break;
             case LEFT_30:
-                y = 30;
+                y = -30;
                 break;
         }
         return y;
