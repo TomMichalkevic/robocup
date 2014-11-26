@@ -53,7 +53,9 @@ public abstract class Player implements ControllerPlayer {
             LONG_DRIBBLE_POWER = 6,
             CLEARANCE_POWER = 50,
             BASE_SHOOT_POWER = 50,
-            GOAL_AGGRESSION_CHANGE = 5;
+            GOAL_AGGRESSION_CHANGE = 5,
+            PROGRESS_AGGRESSION_CHANGE = 1,
+            PROGRESS_AGGRESSION_FREQUENCY = 5;
 
     /*
      * ########################################################################################
@@ -144,6 +146,9 @@ public abstract class Player implements ControllerPlayer {
         if (getPlayer().getNumber() == 1) {
             playerPositionModel.clearModel();
             TickCount++;
+            if ((halfProgress() * 100) % PROGRESS_AGGRESSION_FREQUENCY == 0){
+                setAggression(getAggression() + PROGRESS_AGGRESSION_CHANGE); //Make this faser if losing?
+            }
         }
 
     }
@@ -167,11 +172,40 @@ public abstract class Player implements ControllerPlayer {
         return playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
     }
 
+    /**
+     * The shortest direction towards own goal calculated from our directions or fall back to original calculation
+     * @return direction to our goal
+     */
+    protected double directionToOwnGoal()
+    {
+        if (playerPosition() != null) {
+            double toLeft = -playerPosition().absoluteDirection;
+            double toRight = 360 - playerPosition().absoluteDirection;
+            return Math.abs(toLeft) < toRight ? toLeft : toRight;
+        }
+        return directionOwnGoal;
+    }
 
+    /**
+     * The shortest direction towards other goal calculated from our directions or fall back to original calculation
+     * @return direction to other goal
+     */
+    protected double directionToOtherGoal()
+    {
+        if (playerPosition() != null) {
+            return 180 - playerPosition().absoluteDirection;
+        }
+        return directionOtherGoal;
+    }
+
+    /**
+     *
+     * @return is there any players close in front
+     */
     protected boolean areNoCloseForwardPlayers()
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 0, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() == 0;
+            return playerPositionModel.filterObjects(this, 0, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 5, 0).size() == 0;
         }
         return false;
     }
@@ -182,7 +216,7 @@ public abstract class Player implements ControllerPlayer {
     protected boolean isFowardOwnPlayer()
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 1, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() > 0;
+            return playerPositionModel.filterObjects(this, 1, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 5, 0).size() > 0;
         }
         return false;
     }

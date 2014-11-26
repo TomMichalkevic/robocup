@@ -64,7 +64,7 @@ public class Goalie extends Player {
                 getPlayer().dash(dashValueSlow());
             } else if (distanceOwnGoal > 3.5) {
                 if (!alreadySeeingOwnGoal) {
-                    getPlayer().turn(directionOwnGoal);
+                    getPlayer().turn(directionToOwnGoal());
                     alreadySeeingOwnGoal = true;
                 }
                 getPlayer().dash(dashValueVeryFast());

@@ -41,12 +41,12 @@ public class Defender extends Player {
         } else if (areNoCloseForwardPlayers()) {
             if (playerNumber == LEFT_BACK || playerNumber == RIGHT_BACK) {
                 // Let wingers go a bit faster
-                getPlayer().kick(LONG_DRIBBLE_POWER, directionOtherGoal);
+                getPlayer().kick(LONG_DRIBBLE_POWER, directionToOtherGoal());
             } else {
-                getPlayer().kick(DRIBBLE_POWER, directionOtherGoal);
+                getPlayer().kick(DRIBBLE_POWER, directionToOtherGoal());
             }
         } else {
-            getPlayer().kick(CLEARANCE_POWER, directionOtherGoal);
+            getPlayer().kick(CLEARANCE_POWER, directionToOtherGoal());
         }
     }
 

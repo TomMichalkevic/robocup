@@ -40,13 +40,13 @@ public class Striker extends Player {
     {
         if (distanceOtherGoal <= STRIKER_SHOOTING_RANGE) {
             //Shoot
-            this.getPlayer().kick(BASE_SHOOT_POWER + getAggression(), directionOtherGoal);
+            this.getPlayer().kick(BASE_SHOOT_POWER + getAggression(), directionToOtherGoal());
         }else if (isFowardOwnPlayer()) {
             //Kick to player
             this.getPlayer().kick(DRIBBLE_POWER + (int) distanceClosestForwardOwnPlayer, directionClosestForwardOwnPlayer);
         } else {
             // Dribble towards goal
-            this.getPlayer().kick(DRIBBLE_POWER, directionOtherGoal);
+            this.getPlayer().kick(DRIBBLE_POWER, directionToOtherGoal());
         }
     }
 

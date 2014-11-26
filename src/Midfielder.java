@@ -38,20 +38,20 @@ public class Midfielder extends Player {
         int playerNumber = getPlayer().getNumber();
         if (distanceOtherGoal <= STRIKER_SHOOTING_RANGE) {
             //Shoot
-            getPlayer().kick(BASE_SHOOT_POWER + getAggression()/2, directionOtherGoal);
+            getPlayer().kick(BASE_SHOOT_POWER + getAggression()/2, directionToOtherGoal());
         } else if (isFowardOwnPlayer()) {
             //Kick to player
             getPlayer().kick(DRIBBLE_POWER + (int) distanceClosestForwardOwnPlayer, directionClosestForwardOwnPlayer);
         } else if (distanceOtherGoal <= MIDFIELDER_SHOOTING_RANGE) {
             //Shoot
-            getPlayer().kick(BASE_SHOOT_POWER + getAggression(), directionOtherGoal);
+            getPlayer().kick(BASE_SHOOT_POWER + getAggression(), directionToOtherGoal());
         } else {
             if (playerNumber == LEFT_WING || playerNumber == RIGHT_WING) {
                 // Dribble towards goal
-                getPlayer().kick(LONG_DRIBBLE_POWER, directionOtherGoal);
+                getPlayer().kick(LONG_DRIBBLE_POWER, directionToOtherGoal());
             } else {
                 // Dribble towards goal
-                getPlayer().kick(DRIBBLE_POWER, directionOtherGoal);
+                getPlayer().kick(DRIBBLE_POWER, directionToOtherGoal());
             }
         }
     }
