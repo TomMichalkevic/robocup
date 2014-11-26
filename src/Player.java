@@ -162,11 +162,18 @@ public abstract class Player implements ControllerPlayer {
        getPlayer().turn(45);
     }
 
+    protected EstimatedPosition playerPosition()
+    {
+        return playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
+    }
+
 
     protected boolean areNoCloseForwardPlayers()
     {
-        EstimatedPosition player = playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
-        return playerPositionModel.filterObjects(this, 0, player.x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() == 0;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 0, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() == 0;
+        }
+        return false;
     }
     /**
      *
@@ -174,8 +181,10 @@ public abstract class Player implements ControllerPlayer {
      */
     protected boolean isFowardOwnPlayer()
     {
-        EstimatedPosition player = playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
-        return playerPositionModel.filterObjects(this, 1, player.x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() == 0;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 1, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() > 0;
+        }
+        return false;
     }
 
     /**
@@ -184,7 +193,10 @@ public abstract class Player implements ControllerPlayer {
      */
     protected boolean isBallOtherGoalSideOfPlayer()
     {
-        return true;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 3, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0).size() > 0;
+        }
+        return false;
     }
 
     /**
@@ -193,9 +205,16 @@ public abstract class Player implements ControllerPlayer {
      */
     protected boolean isBallOwnGoalSideOfPlayer()
     {
-        return true;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, playerPosition().x, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0).size() > 0;
+        }
+        return false;
     }
 
+    /**
+     * Percentage of time elapsed in half
+     * @return a value between 0 and 1 representing the progress of the half
+     */
     protected static double halfProgress()
     {
         return TickCount / TOTAL_HALF_TICKS;

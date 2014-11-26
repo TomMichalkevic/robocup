@@ -142,7 +142,11 @@ public class PlayerPositionModel {
      * Positions are calculated using circular intersection.
      * Filter the points down using processPoints to give the best fit directed point for the player.
      * Convert the position back in to the axis and units used by the game.
-     * Add the best guess position to estimatedPositions hash
+     * Add the best guess position to estimatedPositions hash.
+     *
+     * Once we have positions of our own team we can use these to find the positions of the other objects relative
+     * to our players.
+     * Start by finding out where the ball is.
      *
      */
     public void estimatePositions()
@@ -167,6 +171,7 @@ public class PlayerPositionModel {
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
+        findTheBall();
     }
 
 
@@ -182,14 +187,55 @@ public class PlayerPositionModel {
 
 
     /**
-     * Must be called after we have player positions
+     * ### Must be called after we have player positions ###
+     *
+     * Use all the players that we have a position for and have seen the ball
+     * Get an estimate of where the ball is from each player
+     * Average the values and assign the estimated position to the positions hash
      */
     private void findTheBall()
     {
-        ArrayList<EstimatedPosition> filteredObjects = new ArrayList<EstimatedPosition>();
+        ArrayList<Point> ballPoints = new ArrayList<Point>();
         for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
-            //get player get ball and calculate position
+            ObjectRelativePosition position = mapping.get(ObjectRelativePosition.codeFor(entry.getKey(), 0, ObjectRelativePosition.RELATION_BALL));
+            if (position != null){
+                EstimatedPosition observer = entry.getValue();
+                double absoluteBallDirectionFromObserver = observer.absoluteDirection + position.direction;
+                Point ball = null;
+                double ballDir;
+                if (absoluteBallDirectionFromObserver <= 90) {
+                    ballDir = absoluteBallDirectionFromObserver;
+                    ball = new Point(observer.x - position.distance * Math.cos(Math.toRadians(ballDir)),
+                                     observer.y - position.distance * Math.sin(Math.toRadians(ballDir)));
+                } else if (absoluteBallDirectionFromObserver <= 180) {
+                    ballDir = absoluteBallDirectionFromObserver - 90;
+                    ball = new Point(observer.x + position.distance * Math.sin(Math.toRadians(ballDir)),
+                                     observer.y - position.distance * Math.cos(Math.toRadians(ballDir)));
+                } else if (absoluteBallDirectionFromObserver <= 270) {
+                    ballDir = absoluteBallDirectionFromObserver - 180;
+                    ball = new Point(observer.x + position.distance * Math.cos(Math.toRadians(ballDir)),
+                                     observer.y + position.distance * Math.sin(Math.toRadians(ballDir)));
+                } else if (absoluteBallDirectionFromObserver <= 360) {
+                    ballDir = absoluteBallDirectionFromObserver - 270;
+                    ball = new Point(observer.x - position.distance * Math.sin(Math.toRadians(ballDir)),
+                                     observer.y + position.distance * Math.cos(Math.toRadians(ballDir)));
+                }
+                if (ball != null) {
+                    ballPoints.add(ball);
+                }
+            }
         }
+
+        double xTotal = 0;
+        double yTotal = 0;
+        for (Point point : ballPoints) {
+            xTotal += point.x;
+            yTotal += point.y;
+        }
+        EstimatedPosition estimatedPosition = new EstimatedPosition(0);
+        estimatedPosition.x = xTotal / ballPoints.size();
+        estimatedPosition.x = yTotal / ballPoints.size();
+        estimatedPositions.put(0, estimatedPosition);
     }
 
 
@@ -349,7 +395,7 @@ class ObjectRelativePosition {
         return fromIdentifier * 1000 + toIdentifier * 10 + relation;
     }
 
-    public int codeFor(int fromIdentifier, int toIdentifier, int relation)
+    public static int codeFor(int fromIdentifier, int toIdentifier, int relation)
     {
         return fromIdentifier * 1000 + toIdentifier * 10 + relation;
     }
