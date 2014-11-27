@@ -132,6 +132,7 @@ public abstract class Player implements ControllerPlayer {
         Player.Aggression = aggression;
     }
 
+
     /** {@inheritDoc} */
     @Override
     public void preInfo() {
@@ -162,24 +163,85 @@ public abstract class Player implements ControllerPlayer {
 
     }
 
+
+    @Override
+    public void postInfo()
+    {
+        playerPositionModel.estimatePositions();
+//        moveToHoldingPosition();;
+
+        if (distanceToBall <= Player.BALL_WITHIN_REACH) {
+            playerHasBallAction();
+        }else if (distanceToBall <= Player.BALL_VERY_CLOSE) {
+            ballIsVeryCloseAction();
+        }else if (distanceToBall <= Player.BALL_CLOSE) {
+            ballIsCloseAction();
+        }else if (distanceToBall < Player.LARGE_DISTANCE){
+            ballIsFarAction();
+        }else {
+            ballNotVisibleAction();
+        }
+    }
+
+
+    /**
+     * Override this method in subclass for the action to take when a player has the ball
+     */
     protected abstract void playerHasBallAction();
+
+
+    /**
+     * Override this method in subclass for the action to take when a player is within BALL_VERY_CLOSE distance
+     */
     protected abstract void ballIsVeryCloseAction();
+
+
+    /**
+     * Override this method in subclass for the action to take when a player is within BALL_CLOSE distance
+     */
     protected abstract void ballIsCloseAction();
+
+
+    /**
+     * Override this method in subclass for the action to take when a player is within LARGE_DISTANCE distance.
+     * e.g. the ball can we seen
+     */
     protected abstract void ballIsFarAction();
+
+
+    /**
+     * Called when player can't sense the ball
+     */
     protected void ballNotVisibleAction()
     {
         moveToHoldingPosition();
     }
+
+
+    /**
+     * Called to move the player back to his holding position.
+     * Holding position is based on the current aggression of the team
+     */
     protected abstract void moveToHoldingPosition();
+
+
+    /**
+     * Ask the player to look around. We turn them by 45 degrees.
+     */
     protected void lookAround()
     {
        getPlayer().turn(45);
     }
 
+
+    /**
+     * @return the estimated position of this player
+     */
     protected EstimatedPosition playerPosition()
     {
         return playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
     }
+
 
     /**
      * The shortest direction towards own goal calculated from our directions or fall back to original calculation
@@ -195,6 +257,7 @@ public abstract class Player implements ControllerPlayer {
         return directionOwnGoal;
     }
 
+
     /**
      * The shortest direction towards other goal calculated from our directions or fall back to original calculation
      * @return direction to other goal
@@ -207,8 +270,8 @@ public abstract class Player implements ControllerPlayer {
         return directionOtherGoal;
     }
 
+
     /**
-     *
      * @return is there any players close in front
      */
     protected boolean areNoCloseForwardPlayers()
@@ -264,6 +327,12 @@ public abstract class Player implements ControllerPlayer {
     }
 
 
+    /**
+     * Filters the estimated positions of our players to leave only those within range of the ball.
+     * Used to stop our team crowding round the ball
+     * @param range the maximum range of players from the ball
+     * @return the number of players within range of the ball
+     */
     protected int numberOfOurPlayersWithRangeOfBall(double range)
     {
         if (playerPosition() != null) {
@@ -272,6 +341,13 @@ public abstract class Player implements ControllerPlayer {
         return -1;
     }
 
+
+    /**
+     * Filters the estimated positions of our players to leave only those within range of the this player.
+     * Used to stop our team bunching up with each other
+     * @param range the maximum range of players from this player
+     * @return the number of players within range of this player
+     */
     protected int numberOfOurPlayersWithRangeOfMe(double range)
     {
         if (playerPosition() != null) {
@@ -280,12 +356,22 @@ public abstract class Player implements ControllerPlayer {
         return -1;
     }
 
+
+    /**
+     * Used to help our players spread out
+     * @param position the object we want to face away from
+     * @return the direction we should turn to face away from the given object
+     */
     protected double oppositeDirectionTo(EstimatedPosition position)
     {
         return playerPositionModel.turnDirectionForOppositeDirectionFrom(this, position);
     }
 
 
+    /**
+     * Filter the positions of our team mates and return the closest
+     * @return the closest team mate
+     */
     protected EstimatedPosition closestTeamMember()
     {
         if (playerPosition() != null) {
@@ -296,6 +382,7 @@ public abstract class Player implements ControllerPlayer {
         }
         return null;
     }
+
 
     /**
      * Move the player towards the given position if possible
@@ -342,47 +429,6 @@ public abstract class Player implements ControllerPlayer {
 
     }
 
-
-    @Override
-    public void postInfo()
-    {
-        playerPositionModel.estimatePositions();
-//        moveToHoldingPosition();;
-
-        if (distanceToBall <= Player.BALL_WITHIN_REACH) {
-            playerHasBallAction();
-        }else if (distanceToBall <= Player.BALL_VERY_CLOSE) {
-            ballIsVeryCloseAction();
-        }else if (distanceToBall <= Player.BALL_CLOSE) {
-            ballIsCloseAction();
-        }else if (distanceToBall < Player.LARGE_DISTANCE){
-            ballIsFarAction();
-        }else {
-            ballNotVisibleAction();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void infoHearPlayMode(PlayMode playMode)
-    {
-        int playerNumber = this.getPlayer().getNumber();
-        if (playerNumber == 1) {
-           if (playMode == PlayMode.GOAL_OWN) {
-               GoalsOwn = GoalsOwn + 1;
-               setAggression(getAggression() - GOAL_AGGRESSION_CHANGE);
-           }else if (playMode == PlayMode.GOAL_OTHER) {
-               GoalsOther = GoalsOther + 1;
-               setAggression(getAggression() + GOAL_AGGRESSION_CHANGE);
-           }
-        }
-
-        if (playMode == PlayMode.KICK_OFF_OWN) {
-            this.moveToKickoffPositions(playerNumber);
-        } else if (playMode == PlayMode.BEFORE_KICK_OFF || playMode == PlayMode.KICK_OFF_OTHER) {
-            this.moveToStartingPositions(playerNumber);
-        }
-    }
 
     /**
      * @param player the number of the player
@@ -474,8 +520,42 @@ public abstract class Player implements ControllerPlayer {
     }
 
 
-    /** {@inheritDoc} */
+    /**
+     * Dash value should be faster if more stamina is left and the aggression is higher
+     * @return A higher speed dash value
+     */
+    protected int dashValueVeryFast()
+    {
+        int initialPower = getAggression() + 50;
+        return staminaBoost(initialPower);
+    }
 
+    /**
+     * Dash value should be faster if more stamina is left and the aggression is higher
+     * @return A high speed dash value
+     */
+    protected int dashValueFast()
+    {
+        int initialPower = getAggression() + 10;
+        return staminaBoost(initialPower);
+    }
+
+    /**
+     * Dash value should be faster if more stamina is left and the aggression is higher
+     * @return A low speed dash value
+     */
+    protected int dashValueSlow()
+    {
+        int initialPower = getAggression() - 30;
+        return staminaBoost(initialPower);
+    }
+
+
+    /**
+     * If we have plenty of stamina and the half is finishing we can move faster
+     * @param initialPower the power before factoring in stamina
+     * @return the power adjusted by factoring in stamina
+     */
     protected int staminaBoost(int initialPower)
     {
         double usableStamina = (playerRemainingStamina * Player.halfProgress());
@@ -483,22 +563,26 @@ public abstract class Player implements ControllerPlayer {
     }
 
 
-    protected int dashValueVeryFast()
+    /** {@inheritDoc} */
+    @Override
+    public void infoHearPlayMode(PlayMode playMode)
     {
-        int initialPower = getAggression() + 50;
-        return staminaBoost(initialPower);
-    }
+        int playerNumber = this.getPlayer().getNumber();
+        if (playerNumber == 1) {
+            if (playMode == PlayMode.GOAL_OWN) {
+                GoalsOwn = GoalsOwn + 1;
+                setAggression(getAggression() - GOAL_AGGRESSION_CHANGE);
+            }else if (playMode == PlayMode.GOAL_OTHER) {
+                GoalsOther = GoalsOther + 1;
+                setAggression(getAggression() + GOAL_AGGRESSION_CHANGE);
+            }
+        }
 
-    protected int dashValueFast()
-    {
-        int initialPower = getAggression() + 10;
-        return staminaBoost(initialPower);
-    }
-
-    protected int dashValueSlow()
-    {
-        int initialPower = getAggression() - 30;
-        return staminaBoost(initialPower);
+        if (playMode == PlayMode.KICK_OFF_OWN) {
+            this.moveToKickoffPositions(playerNumber);
+        } else if (playMode == PlayMode.BEFORE_KICK_OFF || playMode == PlayMode.KICK_OFF_OTHER) {
+            this.moveToStartingPositions(playerNumber);
+        }
     }
 
 
@@ -508,7 +592,6 @@ public abstract class Player implements ControllerPlayer {
     {
         return player;
     }
-
     /** {@inheritDoc} */
     @Override
     public void setPlayer(ActionsPlayer p)
@@ -532,35 +615,6 @@ public abstract class Player implements ControllerPlayer {
         directionToBall = direction;
         playerPositionModel.addBall(this, distance, direction);
     }
-
-
-    /** {@inheritDoc} */
-    @Override
-    public void infoSeeFlagGoalOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
-                                   double bodyFacingDirection, double headFacingDirection)
-    {
-        if (!alreadySeeingOwnGoal) {
-            directionMultiplier *= -1.0;
-        }
-        if (flag.compareTo(Flag.CENTER) == 0) {
-            distanceOwnGoal = distance;
-            directionOwnGoal = direction;
-            canSeeOwnGoal = true;
-            ownGoalTurn = 180;
-        }
-        if (flag.compareTo(Flag.LEFT) == 0) {
-            canSeeGoalLeft = true;
-            ownGoalTurn = 90;
-        }
-        if (flag.compareTo(Flag.RIGHT) == 0) {
-            canSeeGoalRight = true;
-            ownGoalTurn = -90;
-        }
-    }
-
-
-
-
 
 
     /** {@inheritDoc} */
@@ -616,12 +670,39 @@ public abstract class Player implements ControllerPlayer {
         this.playerRemainingStamina = stamina;
     }
 
+
+    /** {@inheritDoc} */
+    @Override
+    public void infoSeeFlagGoalOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
+                                   double bodyFacingDirection, double headFacingDirection)
+    {
+        if (!alreadySeeingOwnGoal) {
+            directionMultiplier *= -1.0;
+        }
+        if (flag.compareTo(Flag.CENTER) == 0) {
+            distanceOwnGoal = distance;
+            directionOwnGoal = direction;
+            canSeeOwnGoal = true;
+            ownGoalTurn = 180;
+        }
+        if (flag.compareTo(Flag.LEFT) == 0) {
+            canSeeGoalLeft = true;
+            ownGoalTurn = 90;
+        }
+        if (flag.compareTo(Flag.RIGHT) == 0) {
+            canSeeGoalRight = true;
+            ownGoalTurn = -90;
+        }
+    }
+
+
+
     /** {@inheritDoc} */
     @Override
     public void infoSeeFlagGoalOther(Flag flag, double distance, double direction, double distChange, double dirChange,
                                      double bodyFacingDirection, double headFacingDirection)
     {
-
+        //-7
         if(flag.compareTo(Flag.CENTER) == 0)
         {
             distanceOtherGoal = distance;
@@ -629,7 +710,6 @@ public abstract class Player implements ControllerPlayer {
             canSeeOtherGoal = true;
             otherGoalTurn = 180;
         }
-
     }
 
 
