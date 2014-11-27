@@ -26,6 +26,8 @@ public abstract class Player implements ControllerPlayer {
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5,
             BALL_CROWDING_RANGE = 5,
             PLAYER_CROWDING_RANGE = 3,
+            BALL_TRACKING_DISTANCE = 10, //Keep this range from ball if players are crowding it
+            ATTACK_COUNT_THRESHOLD = 4,
             HOLDING_POSITION_RADIUS = 3; //Hard to work out EXACTLY where they are so allow some flexibility in reaching the position
     /**
      * Define a constant for each player position for readability.
@@ -87,10 +89,6 @@ public abstract class Player implements ControllerPlayer {
             directionOtherGoal = 0,
             distanceOtherGoal = -1.0,
             directionMultiplier = 1.0,
-            distanceClosestForwardOwnPlayer = -1,
-            directionClosestForwardOwnPlayer = -1,
-            distanceClosestForwardOtherPlayer = -1,
-            directionClosestForwardOtherPlayer = -1,
             ownGoalTurn,
             otherGoalTurn,
             playerRemainingStamina = 0;
@@ -100,26 +98,26 @@ public abstract class Player implements ControllerPlayer {
             canSeeGoalRight = false,
             canSeeFieldEnd = false,
             alreadySeeingOwnGoal = false,
-            alreadySeeingOtherGoal = false,
             canSeeOtherGoal = false,
             canSeeOwnPenalty = false,
-            needsToRetreat = false,
-            haveSeenSomeMarker = true;
+            needsToRetreat = false;
+
 
     protected ActionsPlayer player;
     protected Random random        = null;
-    protected static int count = 0, ballPositionOffset = 0;
+    protected static int Count = 0, BallPositionOffset = 0, LastAttackCount = 0;
     protected String playerType = "";
+    protected static boolean Attacking = false;
     private static PlayerPositionModel playerPositionModel = null;
 
 
     public Player()
     {
-        random = new Random(System.currentTimeMillis() + count);
+        random = new Random(System.currentTimeMillis() + Count);
         if (playerPositionModel == null) {
             playerPositionModel = new PlayerPositionModel();
         }
-        count++;
+        Count++;
     }
 
     public int getAggression()
@@ -156,6 +154,13 @@ public abstract class Player implements ControllerPlayer {
             if (TickCount == 2999) {
                 Object h = stats;
             }
+            if (Attacking) {
+                LastAttackCount++;
+            }
+            if (LastAttackCount >= Player.ATTACK_COUNT_THRESHOLD) {
+                Attacking = false;
+                LastAttackCount = 0;
+            }
             if ((halfProgress() * 100) % PROGRESS_AGGRESSION_FREQUENCY == 0){
                 setAggression(getAggression() + PROGRESS_AGGRESSION_CHANGE); //Make this faster if losing?
             }
@@ -181,6 +186,28 @@ public abstract class Player implements ControllerPlayer {
         }
     }
 
+    /**
+     * Called when an attacking player kicks the balls. We automatically drop out of attack mode a few ticks later
+     */
+    protected void startAttacking()
+    {
+        Attacking = true;
+    }
+
+    /**
+     * Find out if the ball is in our goal area and if it is make sure we arn't in attack mode
+     * @return if ball is in our goal area
+     */
+    protected boolean ballInOurGoalArea()
+    {
+        EstimatedPosition ball = playerPositionModel.estimatedBallPosition();
+        boolean ballInOurArea = ball.y > -15 && ball.y < 15 && ball.x < -30;
+        if (ballInOurArea) {
+            LastAttackCount = 0;
+            Attacking = false;
+        }
+        return ballInOurArea;
+    }
 
     /**
      * Override this method in subclass for the action to take when a player has the ball
@@ -231,6 +258,15 @@ public abstract class Player implements ControllerPlayer {
        getPlayer().turn(45);
     }
 
+
+    /**
+     * Used for defenders to get in a blocking position
+     * @return a point between our goal and the ball
+     */
+    protected Point goalBallInterceptionPoint()
+    {
+        return playerPositionModel.pointBetweenBallAndOurGoal();
+    }
 
     /**
      * @return the estimated position of this player
@@ -397,6 +433,30 @@ public abstract class Player implements ControllerPlayer {
     protected double oppositeDirectionTo(EstimatedPosition position)
     {
         return playerPositionModel.turnDirectionForOppositeDirectionFrom(this, position);
+    }
+
+
+    /**
+     * Used to help pass in the right direction
+     * @param position the object we want to point to
+     * @return the direction we should turn to face twoards the object
+     */
+    protected double directionTo(EstimatedPosition position)
+    {
+        return playerPositionModel.turnDirectionToFacePosition(this, position);
+    }
+
+
+    /**
+     * @param position the object we want to get the distance to
+     * @return the distance to the object
+     */
+    protected double distanceTo(EstimatedPosition position)
+    {
+        if (playerPosition() != null && position != null) {
+            return playerPosition().distanceToEstimatedPosition(position);
+        }
+        return -1;
     }
 
 

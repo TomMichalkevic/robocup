@@ -309,6 +309,17 @@ public class PlayerPositionModel {
 
 
     /**
+     * @return A point one third of the way from our goal to the ball
+     */
+    public Point pointBetweenBallAndOurGoal()
+    {
+        double ourGoalCenterX = -(Player.BOUNDARY_WIDTH/2 - Player.DISTANCE_PITCH_EDGE_TO_BOUNDARY);
+        EstimatedPosition ball = estimatedBallPosition();
+        return new Point(ourGoalCenterX + (ball.x - ourGoalCenterX) / 3.0, ball.y /3.0);
+    }
+
+
+    /**
      * ### Must be called after we have player positions ###
      *
      * Use all the players that we have a position for and have seen the ball

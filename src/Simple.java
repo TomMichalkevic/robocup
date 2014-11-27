@@ -399,7 +399,7 @@ public class Simple implements ControllerPlayer {
                     for (int i = 0; i < allPlayers.size(); ++i) {
                         SeenPlayer player = allPlayers.get(i);
 
-                        //If the seen player is within the possession radius we count them as having the ball
+                        //If the seen player is within the possession radius we Count them as having the ball
                         //and if they are closer to the ball than the current teammate asigned as in possession and their a teammate and their details have been updated
                         //then set them to in possession
                         if (player.isTeammate && player.updated == true && player.distanceFromBall < POSSESSIONRADIUS && player.distanceFromBall <= playerWithTheBall.distanceFromBall) {

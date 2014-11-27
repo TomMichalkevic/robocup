@@ -1,0 +1,21 @@
+IN2001 - Artificial Intelligence - Coursework 1 - Chris Mitchelmore, Tomas Michalkevic - PEAS
+
+Robocup Task Environment
+Agent type: Soccer player
+Performance measure: Can succeed in scoring a goal against an opposing team. Can also defend against the opposing team and prevent them from scoring a goal.
+Environment: 2D soccer field.
+Actuators: Agent’s movement on the field and its interaction with the ball. Agent’s interaction with other players, referee and a coach.
+Sensors: Virtual flag locations and ability to her other players, coach and the referee. Ability to see player locations and the location of the ball.
+
+Properties of the task environment:
+Partially observable: the agents can only see the ball if the distance between the player and the ball is under the maximum visibility distance, otherwise they have to operate using other sensor data such as flags and goal locations.
+Multi-agent: All the players in a team have to work together to achieve the mutual goal of scoring a goal and stopping the other team from doing the same. There are at least 4 distinct agents on each team: goalkeeper, midfielder, defender, and striker.
+Stochastic: The environment is stochastic because there is no way to determine the behavior of the players in the other team reliably. The only option is to react to actions of the other team real-time.
+Episodic: This is because the actions taken in each previous game do not affect the actions taken in the current or future games.
+Dynamic: The state of the environment is constantly changing regardless whether an agent performs an action or not. The positions of the players and the ball on the field constantly change.
+Continuous: Agents have to cooperate with other players on the field
+Known: Ordinary laws of physics are applied to the environment. Players can move in different directions and a ball can be kicked which will go in the given directions and then slowly stop.
+
+The agents coded are simple reflex agents who perform actions at a given time based on if statements.
+
+

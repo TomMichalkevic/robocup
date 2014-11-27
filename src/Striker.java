@@ -36,55 +36,78 @@ public class Striker extends Player {
     }
 
 
+    /**
+     * Turn on attacking
+     * Decide if we should shoot, pass or dribble
+     */
     protected void playerHasBallAction()
     {
+        startAttacking();
         if (distanceOtherGoal <= STRIKER_SHOOTING_RANGE) {
             //Shoot
             this.getPlayer().kick(BASE_SHOOT_POWER + getAggression(), directionToOtherGoal());
         }else if (isFowardOwnPlayer()) {
             //Kick to player
-            this.getPlayer().kick(DRIBBLE_POWER + (int) distanceClosestForwardOwnPlayer, directionClosestForwardOwnPlayer);
+            this.getPlayer().kick(DRIBBLE_POWER + (int) distanceTo(closestTeamMember()), directionTo(closestTeamMember()));
         } else {
             // Dribble towards goal
             this.getPlayer().kick(DRIBBLE_POWER, directionToOtherGoal());
         }
     }
 
+
+    /**
+     * If there are no players near the ball and it's goal side then go for it, otherwise leave it to midfield
+     * Track the ball
+     */
     protected void ballIsVeryCloseAction()
     {
-        getPlayer().turn(bestDirectionToBall());
-        if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
-            getPlayer().dash(dashValueFast());
-        } else {
-            getPlayer().dash(dashValueSlow());
-        }
-    }
-
-    protected void ballIsCloseAction()
-    {
-        if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
+        int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
+        if (playersCloseToBall == 0 && isBallOtherGoalSideOfPlayer()) {
             getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueVeryFast());
-        } else {
-            moveToHoldingPosition();
+        } else { //Track towards goal
+            trackAttacking();
         }
     }
 
-    protected void ballIsFarAction()
+
+    /**
+     * If the ball is close then either get there very fast if there are no players near or
+     * fast if there is one
+     * otherwise track
+     */
+    protected void ballIsCloseAction()
     {
-        if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
+        int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
+        if (playersCloseToBall == 0 && isBallOtherGoalSideOfPlayer()) {
+            getPlayer().turn(bestDirectionToBall());
+            getPlayer().dash(dashValueVeryFast());
+        } else if (playersCloseToBall < 2 && isBallOtherGoalSideOfPlayer()) {
             getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueFast());
-        } else {
-            moveToHoldingPosition();
+        } else { //Track towards goal
+            trackAttacking();
         }
     }
 
 
+    /**
+     * If the ball is far track pattern
+     */
+    protected void ballIsFarAction()
+    {
+        trackAttacking();
+    }
+
+
+    /**
+     * If we are out of the action, move to our holding position
+     */
     protected void moveToHoldingPosition()
     {
         // Move players further up the field, in holding position, when more aggressive
-        int position = getAggression()/2 - 25 + ballPositionOffset;
+        int position = getAggression()/2 - 25 + BallPositionOffset;
         switch (getPlayer().getNumber()) {
             case CENTER_RIGHT_FORWARD:
                 moveToPosition(position, 10);
@@ -92,6 +115,30 @@ public class Striker extends Player {
             case CENTER_LEFT_FORWARD:
                 moveToPosition(position, -10);
                 break;
+        }
+    }
+
+
+    /**
+     * * If we are attacking then track otherwise move to holding position
+     * If there many players near the ball then we want to get ahead of it to score
+     * If we are tracking distance in front then spread out
+     * If we are spread ahead of the ball then look around
+     */
+    protected void trackAttacking()
+    {
+        if (Attacking){
+            if ((isBallOtherGoalSideOfPlayer() && bestDistanceToBall() < Player.BALL_TRACKING_DISTANCE) || isBallOwnGoalSideOfPlayer()) {
+                getPlayer().turn(directionToOtherGoal());
+                getPlayer().dash(dashValueFast());
+            } else if (numberOfOurPlayersWithRangeOfMe(PLAYER_CROWDING_RANGE) > 0) {
+                getPlayer().turn(directionToOtherGoal());
+                getPlayer().dash(dashValueSlow());
+            } else {
+                lookAround();
+            }
+        }else {
+            moveToHoldingPosition();
         }
     }
 
