@@ -11,15 +11,24 @@ import java.util.Random;
  */
 public abstract class Player implements ControllerPlayer {
 
-    public static final int BOUNDARY_WIDTH = 114,
-            BOUNDARY_HEIGHT = 70,
+
+    /**
+     * ########################################################################################
+     * ###########################          Constants        ##################################
+     * ########################################################################################
+     */
+    public static final int
+            BOUNDARY_WIDTH = 115, // The width of the pitch boundary
+            BOUNDARY_HEIGHT = 78, // The height of the pitch boundary. It's key that these values be accurate for the position model to work
+            LARGE_DISTANCE = 1000, // Use as a constant for large values when searching or viewing
             PENALTY_DISTANCE_FROM_CENTER = 43,
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5,
-            HOLDING_POSITION_RADIUS = 5; //Hard to work out exactly where they are so allow some flexibility in reaching the position
+            HOLDING_POSITION_RADIUS = 3; //Hard to work out EXACTLY where they are so allow some flexibility in reaching the position
     /**
      * Define a constant for each player position for readability.
      */
-    public static final int GOALIE = 1,
+    public static final int
+            GOALIE = 1,
             LEFT_BACK = 2,
             CENTER_LEFT_BACK = 3,
             CENTER_RIGHT_BACK = 4,
@@ -31,32 +40,42 @@ public abstract class Player implements ControllerPlayer {
             CENTER_LEFT_FORWARD = 10,
             CENTER_RIGHT_FORWARD = 11;
 
-    protected static final double BALL_WITHIN_REACH = 0.7,
+    protected static final double
+            BALL_WITHIN_REACH = 0.7,
             BALL_VERY_CLOSE = 2,
-            BALL_CLOSE = 15,
-            STRIKER_SHOOTING_RANGE = 10.0,
-            MIDFIELDER_SHOOTING_RANGE = 20.0,
-            TOTAL_GAME_TICKS = 3000.0;
+            BALL_CLOSE = 10,
+            STRIKER_SHOOTING_RANGE = 12.0,
+            MIDFIELDER_SHOOTING_RANGE = 22.0,
+            TOTAL_HALF_TICKS = 3000.0;
 
-    protected static final int DRIBBLE_POWER = 6,
+    protected static final int
+            DRIBBLE_POWER = 6,
             LONG_DRIBBLE_POWER = 6,
             CLEARANCE_POWER = 50,
             BASE_SHOOT_POWER = 50,
             GOAL_AGGRESSION_CHANGE = 5;
 
+    /*
+     * ########################################################################################
+     */
 
 
     /**
-     * Aggression defines the teams overall player style. If the team is losing aggression increases and if they are
+     * Aggression defines the teams overall player style. If the team is losing Aggression increases and if they are
      * winning it decreases. Aggression can be read as attack risk.
      *
-     * Because we are using two sets of these players we need an aggression factor for each team.
+     * Also keep track off score and elapsed ticks (once for all players)
      */
-    private static int aggression = 50, goalsOwn = 0, goalsOther = 0, tickCount = 0;
+    private static int
+            Aggression = 50,
+            GoalsOwn = 0,
+            GoalsOther = 0,
+            TickCount = 0;
 
 
 
-    protected double distanceToBall = 1000,
+    protected double
+            distanceToBall = 1000,
             directionToBall = 0,
             directionOwnGoal = 0,
             distanceOwnGoal = -1.0,
@@ -100,12 +119,12 @@ public abstract class Player implements ControllerPlayer {
 
     public int getAggression()
     {
-        return Player.aggression;
+        return Player.Aggression;
     }
 
     public void setAggression(int aggression)
     {
-        Player.aggression = aggression;
+        Player.Aggression = aggression;
     }
 
     /** {@inheritDoc} */
@@ -116,10 +135,6 @@ public abstract class Player implements ControllerPlayer {
         directionOwnGoal = 0;
         distanceOtherGoal = 1000;
         directionOtherGoal = 0;
-        distanceClosestForwardOwnPlayer = -1;
-        directionClosestForwardOwnPlayer = -1;
-        distanceClosestForwardOtherPlayer = -1;
-        directionClosestForwardOtherPlayer = -1;
         canSeeOwnGoal = false;
         canSeeGoalLeft = false;
         canSeeGoalRight = false;
@@ -128,7 +143,7 @@ public abstract class Player implements ControllerPlayer {
         ownGoalTurn = 0.0;
         if (getPlayer().getNumber() == 1) {
             playerPositionModel.clearModel();
-            tickCount++;
+            TickCount++;
         }
 
     }
@@ -144,13 +159,21 @@ public abstract class Player implements ControllerPlayer {
     protected abstract void moveToHoldingPosition();
     protected void lookAround()
     {
-        getPlayer().turn(90);
+       getPlayer().turn(45);
     }
+
+    protected EstimatedPosition playerPosition()
+    {
+        return playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
+    }
+
 
     protected boolean areNoCloseForwardPlayers()
     {
-        return (distanceClosestForwardOwnPlayer > 8 && distanceClosestForwardOtherPlayer > 8) ||
-                (distanceClosestForwardOwnPlayer < 0 && distanceClosestForwardOtherPlayer < 0);
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 0, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() == 0;
+        }
+        return false;
     }
     /**
      *
@@ -158,7 +181,10 @@ public abstract class Player implements ControllerPlayer {
      */
     protected boolean isFowardOwnPlayer()
     {
-        return distanceClosestForwardOwnPlayer > 0;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 1, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 10, 0).size() > 0;
+        }
+        return false;
     }
 
     /**
@@ -167,7 +193,10 @@ public abstract class Player implements ControllerPlayer {
      */
     protected boolean isBallOtherGoalSideOfPlayer()
     {
-        return true;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 3, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0).size() > 0;
+        }
+        return false;
     }
 
     /**
@@ -176,25 +205,39 @@ public abstract class Player implements ControllerPlayer {
      */
     protected boolean isBallOwnGoalSideOfPlayer()
     {
-        return true;
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, playerPosition().x, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0).size() > 0;
+        }
+        return false;
     }
 
+    /**
+     * Percentage of time elapsed in half
+     * @return a value between 0 and 1 representing the progress of the half
+     */
     protected static double halfProgress()
     {
-        return tickCount/TOTAL_GAME_TICKS;
+        return TickCount / TOTAL_HALF_TICKS;
     }
 
+
+    /**
+     * Move the player towards the given position if possible
+     *
+     * @param x the destination x position
+     * @param y the destination y position
+     */
     protected void moveToPosition(int x, int y)
     {
         EstimatedPosition estimatedPosition =  playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
         if (estimatedPosition == null){ // If we don't have a position move a random direction
-            getPlayer().turn(random.nextInt(360));
+            getPlayer().turn(90);
             getPlayer().dash(dashValueSlow());
             return;
         }
         Triangle t = new Triangle();
-        double xDelta = estimatedPosition.x - x;
-        double yDelta = estimatedPosition.y - y;
+        double xDelta = x - estimatedPosition.x;
+        double yDelta = y - estimatedPosition.y;
         t.sideA = Math.abs(xDelta);
         t.sideB = Math.abs(yDelta);
         double distance = t.sideCFromRightAngledTriangle();
@@ -205,16 +248,17 @@ public abstract class Player implements ControllerPlayer {
 
             double absoluteTargetAngle;
 
-            if (xDelta < 0 && yDelta > 0) {// Case 1 (down and right from player)
-                absoluteTargetAngle = Math.PI + t.angleB;
-            }else if (xDelta > 0 && yDelta > 0) {// Case 2 (down and left from player)
-                absoluteTargetAngle = -t.angleB;
-            }else if (xDelta > 0 && yDelta < 0) {// Case 3 (up and left from player)
-                absoluteTargetAngle = t.angleB;
-            }else {// Case 4 (up and right from player)
-                absoluteTargetAngle = Math.PI - t.angleB;
+            if (xDelta < 0 && yDelta < 0) {// Case 1
+                absoluteTargetAngle = Math.PI/2 - t.angleA;
+            }else if (xDelta > 0 && yDelta < 0) {// Case 2
+                absoluteTargetAngle = Math.PI/2 + t.angleA;
+            }else if (xDelta > 0 && yDelta > 0) {// Case 3
+                absoluteTargetAngle = 3*Math.PI/2 - t.angleA;
+            }else {// Case 4
+                absoluteTargetAngle = 3*Math.PI/2 + t.angleA;
             }
             double absoluteTargetAngleDegrees = Math.toDegrees(absoluteTargetAngle) % 360;
+            absoluteTargetAngleDegrees = absoluteTargetAngleDegrees < 0 ? absoluteTargetAngleDegrees + 360 : absoluteTargetAngleDegrees;
             double relativePlayerAngle = absoluteTargetAngleDegrees  - estimatedPosition.absoluteDirection;
             getPlayer().turn(relativePlayerAngle);
             getPlayer().dash(dashValueSlow());
@@ -227,19 +271,19 @@ public abstract class Player implements ControllerPlayer {
     public void postInfo()
     {
         playerPositionModel.estimatePositions();
-        moveToHoldingPosition();;
+//        moveToHoldingPosition();;
 
-//        if (distanceToBall <= Player.BALL_WITHIN_REACH) {
-//            playerHasBallAction();
-//        }else if (distanceToBall <= Player.BALL_VERY_CLOSE) {
-//            ballIsVeryCloseAction();
-//        }else if (distanceToBall <= Player.BALL_CLOSE) {
-//            ballIsCloseAction();
-//        }else if (distanceToBall < 1000){
-//            ballIsFarAction();
-//        }else {
-//            ballNotVisibleAction();
-//        }
+        if (distanceToBall <= Player.BALL_WITHIN_REACH) {
+            playerHasBallAction();
+        }else if (distanceToBall <= Player.BALL_VERY_CLOSE) {
+            ballIsVeryCloseAction();
+        }else if (distanceToBall <= Player.BALL_CLOSE) {
+            ballIsCloseAction();
+        }else if (distanceToBall < Player.LARGE_DISTANCE){
+            ballIsFarAction();
+        }else {
+            ballNotVisibleAction();
+        }
     }
 
     /** {@inheritDoc} */
@@ -249,10 +293,10 @@ public abstract class Player implements ControllerPlayer {
         int playerNumber = this.getPlayer().getNumber();
         if (playerNumber == 1) {
            if (playMode == PlayMode.GOAL_OWN) {
-               goalsOwn++;
+               GoalsOwn = GoalsOwn + 1;
                setAggression(getAggression() - GOAL_AGGRESSION_CHANGE);
            }else if (playMode == PlayMode.GOAL_OTHER) {
-               goalsOther++;
+               GoalsOther = GoalsOther + 1;
                setAggression(getAggression() + GOAL_AGGRESSION_CHANGE);
            }
         }
@@ -359,7 +403,7 @@ public abstract class Player implements ControllerPlayer {
     protected int staminaBoost(int initialPower)
     {
         double usableStamina = (playerRemainingStamina * Player.halfProgress());
-        return (int)(usableStamina / (TOTAL_GAME_TICKS-tickCount)) + initialPower;
+        return (int)(usableStamina / (TOTAL_HALF_TICKS - TickCount)) + initialPower;
     }
 
 
@@ -500,11 +544,6 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeePlayerOther(int number, boolean goalie, double distance, double direction, double distChange,
                                    double dirChange, double bodyFacingDirection, double headFacingDirection) 
     {
-        //TODO: Test that this player is actually in front
-        if (distanceClosestForwardOtherPlayer < 0 || distanceClosestForwardOtherPlayer > distance) {
-            distanceClosestForwardOtherPlayer = distance;
-            directionClosestForwardOtherPlayer = direction;
-        }
         playerPositionModel.addPlayer(this, false, number, distance, direction);
     }
 
@@ -513,11 +552,6 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeePlayerOwn(int number, boolean goalie, double distance, double direction, double distChange,
                                  double dirChange, double bodyFacingDirection, double headFacingDirection) 
     {
-        //TODO: Test that this player is actually in front
-        if (distanceClosestForwardOwnPlayer < 0 || distanceClosestForwardOwnPlayer > distance) {
-            distanceClosestForwardOwnPlayer = distance;
-            directionClosestForwardOwnPlayer = direction;
-        }
         playerPositionModel.addPlayer(this, true, number, distance, direction);
     }
 
@@ -567,10 +601,8 @@ public abstract class Player implements ControllerPlayer {
     {
         int flagY = flagToY(flag);
         int flagX = BOUNDARY_WIDTH /2;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
+
     }
 
     /** {@inheritDoc} */
@@ -578,12 +610,10 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagOwn(Flag flag, double distance, double direction, double distChange, double dirChange,
                                double bodyFacingDirection, double headFacingDirection)
     {
+        //Flags from behind our own goal. X constant, Y changes
         int flagY = flagToY(flag);
-        int flagX = -BOUNDARY_WIDTH /2;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        int flagX = -BOUNDARY_WIDTH/2;
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
         canSeeFieldEnd = true;
     }
 
@@ -607,11 +637,10 @@ public abstract class Player implements ControllerPlayer {
                 break;
         }
         int flagY = multiple * ((BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2);
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance); //TODO distance could be negative
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance); //TODO distance could be negative
     }
+
+
     private static HashMap<String, String> stuff = new HashMap<String, String>();
     /** {@inheritDoc} */
     @Override
@@ -620,10 +649,7 @@ public abstract class Player implements ControllerPlayer {
     {
         int flagX = -(BOUNDARY_WIDTH -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
         int flagY = (BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
     /** {@inheritDoc} */
@@ -633,10 +659,7 @@ public abstract class Player implements ControllerPlayer {
     {
         int flagX = (BOUNDARY_WIDTH -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2;
         int flagY = (BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2 * (flag == Flag.LEFT ? -1 : 1);
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
     /** {@inheritDoc} */
@@ -646,10 +669,7 @@ public abstract class Player implements ControllerPlayer {
     {
         int flagX = PENALTY_DISTANCE_FROM_CENTER;
         int flagY = 0;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
     /** {@inheritDoc} */
@@ -660,10 +680,7 @@ public abstract class Player implements ControllerPlayer {
         canSeeOwnPenalty = true;
         int flagX = -PENALTY_DISTANCE_FROM_CENTER;
         int flagY = 0;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
     /** {@inheritDoc} */
@@ -673,10 +690,8 @@ public abstract class Player implements ControllerPlayer {
     {
         int flagX = flagToX(flag);
         int flagY = BOUNDARY_HEIGHT /2;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
+        
     }
 
     /** {@inheritDoc} */
@@ -691,14 +706,10 @@ public abstract class Player implements ControllerPlayer {
         // OWN_10, OWN_20, OWN_30, OWN_40, OWN_50,
 
 
-        stuff.put(flag + " " + getPlayer().getNumber(), "dir: "+direction+" dis:"+distance);
 
         int flagX = flagToX(flag);
         int flagY = -BOUNDARY_HEIGHT /2;
-        if (haveSeenSomeMarker) {
-            haveSeenSomeMarker = true;
-            playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
-        }
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
     private int flagToX(Flag flag)
@@ -761,13 +772,13 @@ public abstract class Player implements ControllerPlayer {
                 y = 30;
                 break;
             case LEFT_10:
-                y = 10;
+                y = -10;
                 break;
             case LEFT_20:
-                y = 20;
+                y = -20;
                 break;
             case LEFT_30:
-                y = 30;
+                y = -30;
                 break;
         }
         return y;

@@ -1,11 +1,10 @@
-import javafx.geometry.Side;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by cmitchelmore on 16/11/14.
+ *
+ * Our model for the positions of the objects on the field.
+ * This should be a SINGLETON
  */
 public class PlayerPositionModel {
 
@@ -17,8 +16,11 @@ public class PlayerPositionModel {
     private ArrayList<Player> unmappedPlayersWithUnknownPositions;
     private HashMap<Integer, ArrayList<ObjectAbsolutePosition>> absolute;
     private HashMap<Integer, EstimatedPosition> estimatedPositions;
-//    private static  Triangle t1 = new Triangle(); //Use static triangles to save compute resources.. oops multithreading
 
+
+    /**
+     * Init the player position model. absolutes requires an array list for each player for observed positions
+     */
     public PlayerPositionModel()
     {
         knownPositions = new HashMap<String, Point>();
@@ -32,6 +34,11 @@ public class PlayerPositionModel {
         estimatedPositions = new HashMap<Integer, EstimatedPosition>();
     }
 
+
+    /**
+     * Clears the currently observer positions of all players. This should be used at the end of each tick.
+     * TODO: ### Consider implementing caching in case player data insufficient for this tick ###
+     */
     public void clearModel()
     {
         mapping.clear();
@@ -40,6 +47,16 @@ public class PlayerPositionModel {
         }
     }
 
+
+    /**
+     * Save all the sensed objects conveniently in a hash for each player
+     *
+     * @param p Player (controller player abstract subclass)
+     * @param markerAbsoluteX the sensed object's x position in games axis
+     * @param markerAbsoluteY the sensed object's y position in games axis
+     * @param direction the sensed object's direction in degrees offset from player negative is left
+     * @param distance the distance from the player to the object
+     */
     public void addPosition(Player p, int markerAbsoluteX, int markerAbsoluteY, double direction, double distance)
     {
         int playerNumber = p.getPlayer().getNumber();
@@ -50,7 +67,15 @@ public class PlayerPositionModel {
     }
 
 
-
+    /**
+     * Add all the observed players both own and other team
+     *
+     * @param p Player (controller player abstract subclass)
+     * @param ownTeam is it our team or other team
+     * @param number the number of the player seen
+     * @param direction the sensed object's direction in degrees offset from player negative is left
+     * @param distance the distance from the player to the object
+     */
     public void addPlayer(Player p, boolean ownTeam, int number, double distance, double direction)
     {
         int relation = ownTeam ? ObjectRelativePosition.RELATION_OWN_TEAM : ObjectRelativePosition.RELATION_OTHER_TEAM;
@@ -58,289 +83,282 @@ public class PlayerPositionModel {
         mapping.put(o.hashCode(),o);
     }
 
+
+    /**
+     * Track ball here as it doesn't fit in to the other methods
+     * @param p Player (controller player abstract subclass)
+     * @param direction the sensed object's direction in degrees offset from player negative is left
+     * @param distance the distance from the player to the object
+     */
     public void addBall(Player p, double distance, double direction)
     {
         ObjectRelativePosition o = new ObjectRelativePosition(ObjectRelativePosition.RELATION_BALL, p.getPlayer().getNumber(), 0, direction, distance);
         mapping.put(o.hashCode(),o);
     }
 
+
+    /**
+     * Filter the list of estimated positions with the given parameters.
+     * @param p Player (controller player abstract subclass)
+     * @param type 0 = all, 1 = own team, 2 = other team, 3 = ball
+     * @param xGreaterThan absolute x position should be greater than (pitch axis) Use -Player.LARGE_DISTANCE for all
+     * @param yGreaterThan absolute y position should be greater than (pitch axis) Use -Player.LARGE_DISTANCE for all
+     * @param xLessThan absolute x position should be less than (pitch axis) Use Player.LARGE_DISTANCE for all
+     * @param yLessThan absolute y position should be less than (pitch axis) Use Player.LARGE_DISTANCE for all
+     * @param maxDistance the maximum distance from the given player use Player.LARGE_DISTANCE for all
+     * @param minDistance the minimum distance from the given player use 0 for all
+     * @return A filtered array list of positions
+     */
+    public ArrayList<EstimatedPosition> filterObjects(Player p, int type, double xGreaterThan, double yGreaterThan, double xLessThan, double yLessThan, double maxDistance, double minDistance)
+    {
+        ArrayList<EstimatedPosition> filteredObjects = new ArrayList<EstimatedPosition>();
+        for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
+            int identifier = entry.getKey();
+            int playerNumber = p.getPlayer().getNumber();
+            if (playerNumber != identifier) {
+                if (type == 0 || (identifier == 0 && type == 3) || (identifier < 0 && type == 2) || (identifier > 0 && type == 1)) {
+                    EstimatedPosition position = entry.getValue();
+                    if (position.x > xGreaterThan && position.y > yGreaterThan && position.x < xLessThan && position.y < yLessThan) {
+                        EstimatedPosition player = estimatedPlayerPosition(playerNumber);
+                        double distance = Math.sqrt(Math.pow(position.x - player.x,2) + Math.pow(position.y - player.y, 2));
+                        if (distance < maxDistance && distance > minDistance) {
+                            filteredObjects.add(position);
+                        }
+                    }
+                }
+            }
+        }
+        return filteredObjects;
+    }
+
+
+    /**
+     * Initiates the calculations to be done using the current sense set.
+     * This should only be called ONCE per tick.
+     * Use the shared instance of this class to access estimated positions
+     *
+     * Loop through each position of fixed points we have for each player.
+     * Calculate the position of the player based on every point combined with each other.
+     * Positions are calculated using circular intersection.
+     * Filter the points down using processPoints to give the best fit directed point for the player.
+     * Convert the position back in to the axis and units used by the game.
+     * Add the best guess position to estimatedPositions hash.
+     *
+     * Once we have positions of our own team we can use these to find the positions of the other objects relative
+     * to our players.
+     * Start by finding out where the ball is.
+     *
+     */
     public void estimatePositions()
     {
         for (Map.Entry<Integer, ArrayList<ObjectAbsolutePosition>> entry : absolute.entrySet()) {
             EstimatedPosition estimatedPosition = new EstimatedPosition(entry.getKey());
             ArrayList<ObjectAbsolutePosition> absolutes = entry.getValue();
+            ArrayList<DirectedPoint> possiblePoints = new ArrayList<DirectedPoint>();
             for (int i = 0; i < absolutes.size()-1; i++) {
                 for (int j = i+1; j < absolutes.size(); j++) {
-                    DirectedPoint p = triangulate(absolutes.get(i), absolutes.get(j));
-                    if (p != null){
-                        estimatedPosition.x += p.x;
-                        estimatedPosition.y += p.y;
-                        estimatedPosition.absoluteDirection += p.direction;
-                        estimatedPosition.numberPoints++;
-                    }
+                    possiblePoints.addAll(circleBasedTriangulation(absolutes.get(i), absolutes.get(j)));
                 }
             }
-            if (estimatedPosition.numberPoints > 0) {
-                estimatedPosition.x /= estimatedPosition.numberPoints;
-                estimatedPosition.y /= estimatedPosition.numberPoints;
-                estimatedPosition.absoluteDirection /= estimatedPosition.numberPoints;
-                estimatedPosition.y -= Player.BOUNDARY_HEIGHT /2;
-                estimatedPosition.x -= Player.BOUNDARY_WIDTH /2;
-                estimatedPosition.absoluteDirection = Math.toDegrees(estimatedPosition.absoluteDirection);
+
+            if (possiblePoints.size() > 0) {
+                DirectedPoint pos = processPoints(possiblePoints);
+                estimatedPosition.x = pos.x - Player.BOUNDARY_WIDTH/2;
+                estimatedPosition.y = (pos.y - Player.BOUNDARY_HEIGHT/2) * -1; //Correction for reversed lines
+                estimatedPosition.absoluteDirection = Math.toDegrees(pos.direction) % 360;
+                //Correction for java's funky handling of negative modulus
+                estimatedPosition.absoluteDirection = estimatedPosition.absoluteDirection < 0 ? estimatedPosition.absoluteDirection+360 : estimatedPosition.absoluteDirection;
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
-        if (estimatedPositions.size() > 6){
-            int i = 0;
-        }
+        findTheBall();
     }
 
+
+    /**
+     * Use this method to get the best guess position of the given player number (OWN TEAM only)
+     * @param playerNumber the player to get direction of
+     * @return an estimated position for the player
+     */
     public EstimatedPosition estimatedPlayerPosition(int playerNumber)
     {
         return estimatedPositions.get(playerNumber);
     }
 
-    private double angleCWithPointAndADist(Point point, double distanceA)
+
+    /**
+     * ### Must be called after we have player positions ###
+     *
+     * Use all the players that we have a position for and have seen the ball
+     * Get an estimate of where the ball is from each player
+     * Average the values and assign the estimated position to the positions hash
+     */
+    private void findTheBall()
     {
-        Triangle t3 = new Triangle();
-        t3.sideA = point.y;
-        t3.sideB = distanceA;
-        t3.sideC = Math.abs(point.x);
-        t3.calculate();
-        return t3.angleC;
-    }
-
-    private double playerDirectionForSide(Side side, double x, double posADirection, double directionOffset)
-    {
-        double pDir = 0;
-        switch (side) {
-            case LEFT:
-                if (x < 0) {
-                    pDir = Math.toRadians(posADirection) + directionOffset;
-                } else {
-                    pDir = Math.toRadians(posADirection) - directionOffset;
+        ArrayList<Point> ballPoints = new ArrayList<Point>();
+        for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
+            ObjectRelativePosition position = mapping.get(ObjectRelativePosition.codeFor(entry.getKey(), 0, ObjectRelativePosition.RELATION_BALL));
+            if (position != null){
+                EstimatedPosition observer = entry.getValue();
+                double absoluteBallDirectionFromObserver = observer.absoluteDirection + position.direction;
+                Point ball = null;
+                double ballDir;
+                if (absoluteBallDirectionFromObserver <= 90) {
+                    ballDir = absoluteBallDirectionFromObserver;
+                    ball = new Point(observer.x - position.distance * Math.cos(Math.toRadians(ballDir)),
+                                     observer.y - position.distance * Math.sin(Math.toRadians(ballDir)));
+                } else if (absoluteBallDirectionFromObserver <= 180) {
+                    ballDir = absoluteBallDirectionFromObserver - 90;
+                    ball = new Point(observer.x + position.distance * Math.sin(Math.toRadians(ballDir)),
+                                     observer.y - position.distance * Math.cos(Math.toRadians(ballDir)));
+                } else if (absoluteBallDirectionFromObserver <= 270) {
+                    ballDir = absoluteBallDirectionFromObserver - 180;
+                    ball = new Point(observer.x + position.distance * Math.cos(Math.toRadians(ballDir)),
+                                     observer.y + position.distance * Math.sin(Math.toRadians(ballDir)));
+                } else if (absoluteBallDirectionFromObserver <= 360) {
+                    ballDir = absoluteBallDirectionFromObserver - 270;
+                    ball = new Point(observer.x - position.distance * Math.sin(Math.toRadians(ballDir)),
+                                     observer.y + position.distance * Math.cos(Math.toRadians(ballDir)));
                 }
-                break;
-            case RIGHT:
-                if (x < 0) {
-                    pDir = Math.PI - (Math.toRadians(posADirection) + directionOffset);
-                } else {
-                    pDir = Math.PI + (Math.toRadians(posADirection) - directionOffset);
+                if (ball != null) {
+                    ballPoints.add(ball);
                 }
-                break;
-            case TOP:
-                if (x < 0) {
-                    pDir = (Math.PI/2) + (directionOffset - Math.toRadians(posADirection));
-                } else {
-                    pDir = (Math.PI/2) - (directionOffset + Math.toRadians(posADirection));
-                }
-                break;
-            case BOTTOM:
-                if (x < 0) {
-                    pDir = (3*Math.PI/2) - (directionOffset + Math.toRadians(posADirection));
-                } else {
-                    pDir = (3*Math.PI/2) + (directionOffset - Math.toRadians(posADirection));
-                }
-                break;
-        }
-        return pDir;
-    }
-
-
-    private DirectedPoint triangulate(ObjectAbsolutePosition posA, ObjectAbsolutePosition posB)
-    {
-        //First find the distance between the two known points.
-        double distanceC = Math.sqrt(Math.pow((posA.markerAbsoluteX - posB.markerAbsoluteX), 2) + Math.pow((posA.markerAbsoluteY - posB.markerAbsoluteY), 2));
-        double distanceA = posB.distance;
-        double distanceB = posA.distance;
-        Triangle t1 = new Triangle();
-        t1.sideA = distanceA;
-        t1.sideB = distanceB;
-        t1.sideC = distanceC;
-        DirectedPoint p = null;
-        if (t1.calculate()) { // If we can make a triangle
-
-            double angleA = t1.angleA;
-            double angleB = t1.angleB;
-            Point offset = null;
-            double pDir;
-            if (posA.markerAbsoluteX == posB.markerAbsoluteX || posA.markerAbsoluteY == posB.markerAbsoluteY) {
-
-                // If points are on the same x line we have all we need
-                if (posA.markerAbsoluteX == posB.markerAbsoluteX) {
-                    if (posA.markerAbsoluteY > posB.markerAbsoluteY) {
-                        //swap
-                        offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
-                    } else {
-                        offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
-                    }
-
-                    double directionOffset = angleCWithPointAndADist(offset, posA.distance);
-
-                    if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH) { //Right line
-                        pDir = playerDirectionForSide(Side.RIGHT, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY + offset.x, pDir);
-                    }
-                    if (posA.markerAbsoluteX == 0) { //Left Line
-                        pDir = playerDirectionForSide(Side.LEFT, offset.x, posA.direction, directionOffset);
-
-                        p = new DirectedPoint(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x, pDir);
-                    }
-                    //TODO case where on center line
-                }
-                if (posA.markerAbsoluteY == posB.markerAbsoluteY) {
-                    if (posA.markerAbsoluteX > posB.markerAbsoluteX) {
-                        //swap
-                        offset = findOffsetParallel(angleB, angleA, distanceB, distanceA, distanceC);
-                    } else {
-                        offset = findOffsetParallel(angleA, angleB, distanceA, distanceB, distanceC);
-                    }
-
-                    double directionOffset = angleCWithPointAndADist(offset, posA.distance);
-
-                    if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) { //Top line
-                        pDir = playerDirectionForSide(Side.TOP, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y, pDir);
-                    }
-                    if (posA.markerAbsoluteY == 0) { //Bottom line
-                        pDir = playerDirectionForSide(Side.BOTTOM, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY + offset.y, pDir);
-                    }
-                }
-            } else {
-
-                for (int i = 0; i < 1; i++){ //Easy way to skip code when break
-                    //Top left corner
-                    if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT) {
-                        offset = findOffsetPerpendicular(angleA, posB.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY, distanceB);
-                    }
-                    if (posB.markerAbsoluteX == 0 && posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT) {
-                        //swap
-                        offset = findOffsetPerpendicular(angleB, posA.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posB.markerAbsoluteY, distanceA);
-                    }
-                    if (offset != null) {
-
-                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
-                        // Same as LEFT
-                        pDir = playerDirectionForSide(Side.LEFT, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX + offset.y, posA.markerAbsoluteY + offset.x, pDir);
-                        break;
-                    }
-
-                    //Bottom left
-                    if (posB.markerAbsoluteX == 0 && posA.markerAbsoluteY == 0) {
-                        offset = findOffsetPerpendicular(angleA, posB.markerAbsoluteY, posA.markerAbsoluteX, distanceB);
-                    }
-                    if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == 0) {
-                        //swap
-                        offset = findOffsetPerpendicular(angleB, posA.markerAbsoluteY, posB.markerAbsoluteX, distanceA);
-                    }
-
-                    if (offset != null) {
-                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
-                        pDir = playerDirectionForSide(Side.BOTTOM, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX - offset.x, posA.markerAbsoluteY + offset.y, pDir);
-                        break;
-                    }
-
-                    //Bottom right
-                    if (posA.markerAbsoluteX == Player.BOUNDARY_WIDTH && posB.markerAbsoluteY == 0) {
-                        offset = findOffsetPerpendicular(angleA, Player.BOUNDARY_WIDTH - posB.markerAbsoluteX, posA.markerAbsoluteY, distanceB);
-                    }
-                    if (posA.markerAbsoluteX == 0 && posB.markerAbsoluteY == Player.BOUNDARY_WIDTH) {
-                        //swap
-                        offset = findOffsetPerpendicular(angleB, Player.BOUNDARY_WIDTH - posA.markerAbsoluteX, posB.markerAbsoluteY, distanceA);
-                    }
-
-                    if (offset != null) {
-                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
-                        pDir = playerDirectionForSide(Side.RIGHT, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX - offset.y, posA.markerAbsoluteY - offset.x,pDir);
-                        break;
-                    }
-                    //Top right
-                    if (posA.markerAbsoluteY == Player.BOUNDARY_HEIGHT && posB.markerAbsoluteY == Player.BOUNDARY_WIDTH) {
-                        offset = findOffsetPerpendicular(angleA, Player.BOUNDARY_WIDTH - posA.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posB.markerAbsoluteY, distanceB);
-                    }
-                    if (posB.markerAbsoluteY == Player.BOUNDARY_HEIGHT && posA.markerAbsoluteY == Player.BOUNDARY_WIDTH) {
-                        //swap
-                        offset = findOffsetPerpendicular(angleB, Player.BOUNDARY_WIDTH - posB.markerAbsoluteX, Player.BOUNDARY_HEIGHT - posA.markerAbsoluteY, distanceA);
-                    }
-                    if (offset != null) {
-                        double directionOffset = angleCWithPointAndADist(offset, posA.distance);
-                        pDir = playerDirectionForSide(Side.TOP, offset.x, posA.direction, directionOffset);
-                        p = new DirectedPoint(posA.markerAbsoluteX + offset.x, posA.markerAbsoluteY - offset.y, pDir);
-                        break;
-                    }
-                }
-            }
-
-
-            if (p != null && (p.x == Double.NaN || p.y == Double.NaN)){
-                int j = 0;
             }
         }
 
-        return p;
-
-    }
-
-
-    private Point findOffsetParallel(double angleA, double angleB, double distanceA, double distanceB, double distanceC)
-    {
-        double yOffset, xOffset;
-        if (angleA > Math.PI/2){ //Case 1
-            yOffset = Math.sin(Math.PI - angleA) * distanceB;
-            xOffset = -Math.cos(Math.PI - angleA) * distanceB;
-        } else if (angleB > Math.PI/2){ // Case 2
-            yOffset = Math.sin(Math.PI - angleB) * distanceA;
-            xOffset = distanceC + Math.cos(Math.PI - angleB) * distanceA;
-        } else { // Case 3
-            yOffset = Math.sin(angleA) * distanceB;
-            xOffset = Math.cos(Math.PI - angleA) * distanceB;
+        double xTotal = 0;
+        double yTotal = 0;
+        for (Point point : ballPoints) {
+            xTotal += point.x;
+            yTotal += point.y;
         }
-        return new Point(xOffset, yOffset);
+        EstimatedPosition estimatedPosition = new EstimatedPosition(0);
+        estimatedPosition.x = xTotal / ballPoints.size();
+        estimatedPosition.x = yTotal / ballPoints.size();
+        estimatedPositions.put(0, estimatedPosition);
     }
 
-    private Point findOffsetPerpendicular(double angleA, double sideO, double sideP, double distanceB)
+
+    /**
+     * Given an array of directed points find the best fit point.
+     * This is quite an extreme cutting because we are using circular intersection it can be that there are 2
+     * intersections within the pitch for some combination of points. (The intersections that are out of bounds are
+     * eliminated prior to this stage)
+     *
+     * Sort the points by x; then cut, y; then cut, direction; then cut.
+     *
+     * Turns out averaging angles is a little tricky when it wraps around 0. Using this formula
+     *
+     *                   sum_i_from_1_to_N sin(a[i])
+     *  a = arctangent ---------------------------
+     *                   sum_i_from_1_to_N cos(a[i])
+     * @param remainingPoints the points to average
+     * @return The average point of the set
+     */
+    private DirectedPoint processPoints(ArrayList<DirectedPoint> remainingPoints)
     {
-        Triangle t2 = new Triangle();
-        t2.sideA = sideO;
-        t2.sideB = sideP;
-        t2.sideC = t2.sideCFromRightAngledTriangle();
-        t2.calculate();
-        double yOffset, xOffset;
-        if (angleA + t2.angleA < Math.PI/2) { // Case 1
-            double angleY = Math.PI - (angleA + t2.angleA);
-            yOffset = Math.sin(angleY) * distanceB;
-            xOffset = Math.cos(angleY) * distanceB;
-        } else { // Case 2
-            double angleY = Math.PI - (angleA + t2.angleA);
-            yOffset = -Math.sin(angleY) * distanceB;
-            xOffset = Math.cos(angleY) * distanceB;
+
+        Collections.sort(remainingPoints, new PointXComparator());
+        int cut = remainingPoints.size()/10; // Aggressive 10% top and bottom cut off (We can expect a huge range (4-2000) points)
+        remainingPoints = new ArrayList<DirectedPoint>(remainingPoints.subList(cut, remainingPoints.size()-cut));
+        Collections.sort(remainingPoints, new PointYComparator());
+        remainingPoints = new ArrayList<DirectedPoint>(remainingPoints.subList(cut, remainingPoints.size()-cut));
+        Collections.sort(remainingPoints, new PointDirectionComparator());
+        remainingPoints = new ArrayList<DirectedPoint>(remainingPoints.subList(cut, remainingPoints.size()-cut));
+        double xTotal = 0;
+        double yTotal = 0;
+        double cosT = 0;
+        double sinT = 0;
+
+        for (DirectedPoint p : remainingPoints) {
+            xTotal+=p.x;
+            yTotal+=p.y;
+            cosT += Math.cos(p.direction);
+            sinT += Math.sin(p.direction);
         }
-        return new Point(xOffset, yOffset);
+        return new DirectedPoint(xTotal/remainingPoints.size(), yTotal/remainingPoints.size(), Math.atan2(sinT, cosT));
     }
 
-    
+
+    /**
+     * After trying a basic trig based approach to triangulation I decided to use circular intersection, which turned out
+     * to be a lot more straight forward.
+     *
+     * Create a couple of our own Circle class objects.
+     * The circle class has the intersection calculation as a method which returns an array of points.
+     * For each point, eliminate it if it's outside the bounds of our pitch.
+     * With the left over points calculate the ABSOLUTE angle from the player to the marker (0 is left, 270 is down)
+     * Subtract the players 'facing' direction to get the players ABSOLUTE direction on the pitch.
+     * TODO: find out why angle has much higher variance than positions
+     *
+     * @param posA the first position to use
+     * @param posB the second position to use
+     * @return either 0, 1 or 2 points of intersection given the points and distances
+     */
+    private ArrayList<DirectedPoint> circleBasedTriangulation(ObjectAbsolutePosition posA, ObjectAbsolutePosition posB)
+    {
+
+        Circle a = new Circle(posA.markerAbsoluteX, posA.markerAbsoluteY, posA.distance);
+        Circle b = new Circle(posB.markerAbsoluteX, posB.markerAbsoluteY, posB.distance);
+        ArrayList<DirectedPoint> points = a.findIntersectionWithCircle(b);
+
+        Triangle t = new Triangle();
+        ArrayList<DirectedPoint> remainingPoints = new ArrayList<DirectedPoint>();
+
+        for (DirectedPoint p : points){
+            t.clear();
+            if (p.x >= 0 && p.y >= 0 && p.x <= Player.BOUNDARY_WIDTH && p.y <= Player.BOUNDARY_HEIGHT) {
+                double xDelta = posA.markerAbsoluteX - p.x;
+                double yDelta = posA.markerAbsoluteY - p.y;
+                t.sideA = Math.abs(xDelta);
+                t.sideB = Math.abs(yDelta);
+                t.sideC = posA.distance;
+                t.calculate();
+                double absoluteAngleFromPlayerToMarker;
+                if (xDelta > 0 && yDelta < 0) {// Case 1
+                    absoluteAngleFromPlayerToMarker = Math.PI + t.angleB;
+                }else if (xDelta > 0 && yDelta > 0) {// Case 2
+                    absoluteAngleFromPlayerToMarker = Math.PI - t.angleB;
+                }else if (xDelta < 0 && yDelta < 0) {// Case 3
+                    absoluteAngleFromPlayerToMarker = - t.angleB;
+                }else {// Case 4
+                    absoluteAngleFromPlayerToMarker = t.angleB;
+                }
+                p.direction = absoluteAngleFromPlayerToMarker - Math.toRadians(posA.direction); //If negative is counter clockwise
+                remainingPoints.add(p);
+            }
+        }
+        return remainingPoints;
+    }
 
  }
 
 
+/**
+ * Helper class to track the absolute positions of sensed fixed objects
+ */
 class ObjectAbsolutePosition {
 
 
-    public int markerAbsoluteX;
-    public int markerAbsoluteY;
+    public double markerAbsoluteX;
+    public double markerAbsoluteY;
     public int number;
     public double direction;
     public double distance;
 
+    /**
+     *
+     * @param number the player number that sensed the object
+     * @param markerAbsoluteX the absolute x position of the observed object
+     * @param markerAbsoluteY the absolute y position of the observed object
+     * @param direction the direction of the object from the players center
+     * @param distance the distance from the player to the object
+     */
     public ObjectAbsolutePosition(int number, int markerAbsoluteX, int markerAbsoluteY, double direction, double distance)
     {
-        //Lets convert to simple +xy axis when creating points
-        this.markerAbsoluteX = markerAbsoluteX + Player.BOUNDARY_WIDTH /2;
-        this.markerAbsoluteY = markerAbsoluteY + Player.BOUNDARY_HEIGHT /2;
+        //NORMALISE THE AXIS. Lazy Lazy Casty Casty!!
+        this.markerAbsoluteX = (double)markerAbsoluteX + ((double)Player.BOUNDARY_WIDTH) /2;
+        this.markerAbsoluteY = (double)Player.BOUNDARY_HEIGHT - ((double)markerAbsoluteY + ((double)Player.BOUNDARY_HEIGHT) /2);
         this.number = number;
         this.direction = direction;
         this.distance = distance;
@@ -356,29 +374,38 @@ class ObjectRelativePosition {
             RELATION_BALL = 3;
     
     
-    public int fromValue;
+    public int fromIdentifier;
     public int relation;
-    public int toValue;
+    public int toIdentifier;
     
     public double direction;
     public double distance;
     
-    public ObjectRelativePosition(int relation, int fromValue, int toValue, double direction, double distance)
+    public ObjectRelativePosition(int relation, int fromIdentifier, int toIdentifier, double direction, double distance)
     {
         this.relation = relation;
-        this.fromValue = fromValue;
-        this.toValue = toValue;
+        this.fromIdentifier = fromIdentifier;
+        this.toIdentifier = toIdentifier;
         this.direction = direction;
         this.distance = distance;
     }
     
     public int hashCode()
     {
-        return fromValue * 1000 + toValue * 10 + relation;
+        return fromIdentifier * 1000 + toIdentifier * 10 + relation;
+    }
+
+    public static int codeFor(int fromIdentifier, int toIdentifier, int relation)
+    {
+        return fromIdentifier * 1000 + toIdentifier * 10 + relation;
     }
     
 }
 
+
+/**
+ * Point representation. Built in class was being funny with doubles.
+ */
 class Point {
     public double x;
     public double y;
@@ -386,15 +413,22 @@ class Point {
         this.x = x;
         this.y = y;
     }
-    
-    
+
+    /**
+     * Convenience method for calculating the distance between this point and another
+     * @param p the point to find the distance from
+     * @return distance from this point to the given point
+     */
     public double distanceFromPoint(Point p) 
     {
         return Math.sqrt(Math.pow(x-p.x,2) + Math.pow(y-p.y,2));  
     }
 }
 
-// LEFT is 0 degrees...
+/**
+ * Extend Point to add direction
+ * LEFT is 0 degrees...
+ */
 class DirectedPoint extends Point {
     public double direction;
     public DirectedPoint(double x, double y, double direction){
@@ -403,11 +437,15 @@ class DirectedPoint extends Point {
     }
 }
 
-
+/**
+ * A representation of a dynamic objects position
+ *
+ * Can be our team or other or the ball.
+ * Ball direction is trajectory
+ */
 class EstimatedPosition {
 
     public int identifier; // (-11 to 11) - other team + our team 0=ball
-    public int numberPoints;
     public double totalOffset;
     public double x;
     public double y;
@@ -416,7 +454,6 @@ class EstimatedPosition {
     EstimatedPosition(int identifier)
     {
         totalOffset = 0;
-        numberPoints = 0;
         absoluteDirection = 0;
         x = 0;
         y = 0;
@@ -424,16 +461,77 @@ class EstimatedPosition {
     }
 }
 
+
+/**
+ * Allows sorting of points based on Y value
+ */
+class PointYComparator implements Comparator<Point> {
+    @Override
+    public int compare(Point o1, Point o2) {
+        return Double.compare(o1.y,o2.y);
+    }
+}
+
+
+/**
+ * Allows sorting of points based on X value
+ */
+class PointXComparator implements Comparator<Point> {
+    @Override
+    public int compare(Point o1, Point o2) {
+        return Double.compare(o1.x,o2.x);
+    }
+}
+
+
+/**
+ * Allows sorting of directed points based on direction
+ * Yes, this doesn't really make that much sense... but it's used to allow us to trim the range of a given set of angles
+ */
+class PointDirectionComparator implements Comparator<DirectedPoint> {
+    @Override
+    public int compare(DirectedPoint o1, DirectedPoint o2) {
+        return Double.compare(o1.direction, o2.direction);
+    }
+}
+
+
+/**
+ * Our custom representation of a circle.
+ * Used to encapsulate the logic for intersection calculations
+ *
+ * Used with observed positions where center is position of the object and radius is the distance to the observing player
+ */
 class Circle {
     
     public double radius;
     public Point center;
-    
-    
-    public ArrayList<Point> findIntersectionWithCircle(Circle circle2)
+
+
+    /**
+     *
+     * @param x center x pos
+     * @param y center y pos
+     * @param radius radius of the circle
+     */
+    public Circle(double x, double y, double radius)
+    {
+        center = new Point(x,y);
+        this.radius = radius;
+    }
+
+    /**
+     * Find the intersection of this circle and another. The full explanation of the equation can be found here:
+     * http://paulbourke.net/geometry/circlesphere/
+     *
+     * @param circle2
+     * @return an array of (1,2 or 3)points of intersection (this could have been a regular point but it saves creating
+     * extra objects when converting. Just set direction to 0)
+     */
+    public ArrayList<DirectedPoint> findIntersectionWithCircle(Circle circle2)
     {
         //Calculate distance between centres of circle
-        ArrayList<Point> points = new ArrayList<Point>();
+        ArrayList<DirectedPoint> points = new ArrayList<DirectedPoint>();
         double distanceBetweenCenters = center.distanceFromPoint(circle2.center);
   
         double m = radius + circle2.radius;
@@ -443,47 +541,49 @@ class Circle {
             n = n * -1;
         }
         
-        //No intersection
-        if (distanceBetweenCenters > m) {
+        //No points of intersection (circles don't touch or are contained within each other)
+        if (distanceBetweenCenters > m || distanceBetweenCenters < n) {
             return  points;
         }
-         
 
-        //Circle are contained within each other
-        if (distanceBetweenCenters < n){
-            return  points;
-        }
         
-        //Circles are the same
+        //Circle is the same as this one (Not going to happen in our use case)
         if (distanceBetweenCenters == 0 && radius == circle2.radius){
             return  points;
         }
 
-        double a = (Math.pow(radius,2) - Math.pow(circle2.radius, 2) + Math.pow(distanceBetweenCenters,2) / (2 * distanceBetweenCenters);
+        // Intersection calculation
+        double a = (Math.pow(radius,2) - Math.pow(circle2.radius, 2) + Math.pow(distanceBetweenCenters,2)) / (2 * distanceBetweenCenters);
         double h = Math.sqrt(radius * radius - a * a);
 
-        //Calculate point p, where the line through the circle intersection points crosses the line between the circle centers.  
-        Point p = new Point(center.x + (a /distanceBetweenCenters) * (circle2.center.x -center.x),
-                            center.y + (a /distanceBetweenCenters) * (circle2.center.y -center.y));
+        DirectedPoint p = new DirectedPoint(center.x + (a /distanceBetweenCenters) * (circle2.center.x -center.x),
+                                            center.y + (a /distanceBetweenCenters) * (circle2.center.y -center.y), 0);
         points.add(p);
 
-        if (distanceBetweenCenters== radius + circle2.radius) {
+        //Circles touch exactly once (unlikely...)
+        if (distanceBetweenCenters == radius + circle2.radius) {
             return points;
         }
 
-        Point p1 = new Point(p.x + (h /distanceBetweenCenters) * (circle2.center.y - center.y),
-                             p.y - (h /distanceBetweenCenters) * (circle2.center.x - center.x));
+        DirectedPoint p1 = new DirectedPoint(p.x + (h /distanceBetweenCenters) * (circle2.center.y - center.y),
+                             p.y - (h /distanceBetweenCenters) * (circle2.center.x - center.x), 0);
 
-        Point p2 = new Point(p.x - (h /distanceBetweenCenters) * (circle2.center.y - center.y),
-                             p.y + ( h /distanceBetweenCenters) * (circle2.center.x - center.x));
+        DirectedPoint p2 = new DirectedPoint(p.x - (h /distanceBetweenCenters) * (circle2.center.y - center.y),
+                             p.y + ( h /distanceBetweenCenters) * (circle2.center.x - center.x), 0);
 
         points.clear();
         points.add(p1);
         points.add(p2);
         return points;
     }
+
 }
 
+
+/**
+ * Convenience class for handling triangle logic.
+ * Given 3 bits of information (including at least 1 side) we can calculate everything else about the triangle.
+ */
 class Triangle {
 
 
@@ -495,13 +595,21 @@ class Triangle {
     public double angleC = 0;
 
 
-    // Have side A and B? Are RA triagnle? Use this method
+    /**
+     * Have side A and B?
+     * Are you SURE the triangle is a right angled triangle? Then use this method
+     * @return side C using pythagoras' theorum
+     */
     public double sideCFromRightAngledTriangle()
     {
         sideC = Math.sqrt(Math.pow(sideA,2) + Math.pow(sideB, 2));
         return sideC;
     }
 
+
+    /**
+     * If using for calculations in a loop, save creating new objects by clearing and reusing this one.
+     */
     public void clear()
     {
         sideC = 0;
@@ -512,6 +620,13 @@ class Triangle {
         angleC = 0;
     }
 
+
+    /**
+     * Once you have set information about the triangle using the public properties then ask the triangle to calculate
+     * everything else.
+     *
+     * @return true if a triangle can be made with the given information
+     */
     public boolean calculate()
     {
         if (!canMakeTriangle()) {
@@ -579,16 +694,31 @@ class Triangle {
         return false;
     }
 
+
+    /**
+     * Helper method for triangle calculations
+     * @return can we make a triangle?
+     */
     private boolean canMakeTriangle()
     {
         return !(numSides() == 0 || numValues() < 3);
     }
 
+
+    /**
+     * Helper method for triangle calculations
+     * @return how many values we have
+     */
     private int numValues()
     {
         return numSides() + numAngles();
     }
 
+
+    /**
+     * Helper method for triangle calculations
+     * @return how many sides there are
+     */
     private int numSides()
     {
         return  oneOrNone(sideA) +
@@ -596,6 +726,11 @@ class Triangle {
                 oneOrNone(sideC);
     }
 
+
+    /**
+     * Helper method for triangle calculations
+     * @return how many angles we have
+     */
     private int numAngles()
     {
         return  oneOrNone(angleA) +
@@ -603,11 +738,20 @@ class Triangle {
                 oneOrNone(angleC);
     }
 
+
+    /**
+     * Helper method for triangle calculations
+     * @return 1 if the value is greater than 0 else 0
+     */
     private int oneOrNone(double value)
     {
         return value > 0 ? 1 : 0;
     }
 
+
+    /**
+     * Law of the cosines. Called by the calculate method, if we have 3 sides, to solve the angles.
+     */
     private void threeSides()
     {
         double distanceASquared = Math.pow(sideA, 2);
