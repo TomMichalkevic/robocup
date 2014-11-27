@@ -131,16 +131,16 @@ public class Midfielder extends Player {
         int position = Math.max(getAggression()/4 - 30 + BallPositionOffset, -35);
         switch (getPlayer().getNumber()) {
             case LEFT_WING :
-                moveToPosition(position, -20);
+                moveToPosition(position, -20, dashValueSlow());
                 break;
             case CENTER_LEFT_MIDFIELD :
-                moveToPosition(position, -8);
+                moveToPosition(position, -8, dashValueSlow());
                 break;
             case CENTER_RIGHT_MIDFIELD :
-                moveToPosition(position, 8);
+                moveToPosition(position, 8, dashValueSlow());
                 break;
             case RIGHT_WING :
-                moveToPosition(position, 20);
+                moveToPosition(position, 20, dashValueSlow());
                 break;
         }
     }

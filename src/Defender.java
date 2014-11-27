@@ -32,12 +32,16 @@ public class Defender extends Player {
        playerType = "Defender";
     }
 
+    /**
+     * If we have the ball, attempt to pass it out first
+     * then if we can't find a good pass dribble it forward if there is space
+     * or just kick it clear
+     */
     protected void playerHasBallAction()
     {
         int playerNumber = getPlayer().getNumber();
         if (isFowardOwnPlayer()) {
             //Kick to player
-
             getPlayer().kick(DRIBBLE_POWER + (int) distanceTo(closestTeamMember()), directionTo(closestTeamMember()));
         } else if (areNoCloseForwardPlayers()) {
             if (playerNumber == LEFT_BACK || playerNumber == RIGHT_BACK) {
@@ -68,46 +72,54 @@ public class Defender extends Player {
         }
     }
 
+
+    /**
+     * If there aren't meany players near ball move towards it, else track
+     */
     protected void ballIsCloseAction()
     {
-        if (isBallOwnGoalSideOfPlayer()) { //Don't burn defender stamina attacking
+        int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
+        if (playersCloseToBall < 2) {
             getPlayer().turn(bestDirectionToBall());
-            getPlayer().dash(dashValueVeryFast());
-        } else {
-            moveToHoldingPosition();
+            getPlayer().dash(defenderDashSpeed());
+        } else { //Track towards goal
+            trackDefending();
         }
     }
 
+
+    /**
+     * Track defending if the ball is far away
+     */
     protected void ballIsFarAction()
     {
-        if (isBallOwnGoalSideOfPlayer()) { //Don't burn defender stamina attacking back
-            getPlayer().turn(bestDirectionToBall());
-            getPlayer().dash(dashValueFast());
-        } else {
-            moveToHoldingPosition();
-        }
+        trackDefending();
     }
 
 
+    /**
+     * If we are out of the action, move to our holding position
+     */
     protected void moveToHoldingPosition()
     {
         // Don't let defenders move to far back!
         int position = Math.max(getAggression()/6 - 45 + BallPositionOffset, -45);
         switch (getPlayer().getNumber()) {
             case LEFT_BACK :
-                moveToPosition(position, -20);
+                moveToPosition(position, -20, dashValueSlow());
                 break;
             case CENTER_LEFT_BACK :
-                moveToPosition(position, -8);
+                moveToPosition(position, -8, dashValueSlow());
                 break;
             case CENTER_RIGHT_BACK :
-                moveToPosition(position, 8);
+                moveToPosition(position, 8, dashValueSlow());
                 break;
             case RIGHT_BACK :
-                moveToPosition(position, 20);
+                moveToPosition(position, 20, dashValueSlow());
                 break;
         }
     }
+
 
     /**
      * Increase dash speed when ball is in our goal area
@@ -150,7 +162,7 @@ public class Defender extends Player {
     protected void interceptBall()
     {
         Point point = goalBallInterceptionPoint();
-        moveToPosition((int)point.x,(int)point.y);
+        moveToPosition((int)point.x,(int)point.y, dashValueVeryFast());
     }
 
 

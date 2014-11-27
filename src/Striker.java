@@ -110,10 +110,10 @@ public class Striker extends Player {
         int position = getAggression()/2 - 25 + BallPositionOffset;
         switch (getPlayer().getNumber()) {
             case CENTER_RIGHT_FORWARD:
-                moveToPosition(position, 10);
+                moveToPosition(position, 10, dashValueSlow());
                 break;
             case CENTER_LEFT_FORWARD:
-                moveToPosition(position, -10);
+                moveToPosition(position, -10, dashValueSlow());
                 break;
         }
     }

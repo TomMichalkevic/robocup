@@ -24,6 +24,7 @@ public abstract class Player implements ControllerPlayer {
             LARGE_DISTANCE = 1000, // Use as a constant for large values when searching or viewing
             PENALTY_DISTANCE_FROM_CENTER = 43,
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5,
+            INTERCEPTION_MAX_DISTANCE = 3,
             BALL_CROWDING_RANGE = 5,
             PLAYER_CROWDING_RANGE = 3,
             BALL_TRACKING_DISTANCE = 10, //Keep this range from ball if players are crowding it
@@ -276,6 +277,10 @@ public abstract class Player implements ControllerPlayer {
         return playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
     }
 
+    protected boolean inBetweenOurGoalAndBall()
+    {
+        return playerPositionModel.inBetweenOurGoalAndBall(this);
+    }
 
     /**
      * The shortest direction towards own goal calculated from our directions or fall back to original calculation
@@ -481,8 +486,9 @@ public abstract class Player implements ControllerPlayer {
      *
      * @param x the destination x position
      * @param y the destination y position
+     * @param dashSpeed the speed to move to the position
      */
-    protected void moveToPosition(int x, int y)
+    protected void moveToPosition(int x, int y, int dashSpeed)
     {
         EstimatedPosition estimatedPosition =  playerPositionModel.estimatedPlayerPosition(getPlayer().getNumber());
         if (estimatedPosition == null){ // If we don't have a position move a random direction
@@ -516,7 +522,7 @@ public abstract class Player implements ControllerPlayer {
             absoluteTargetAngleDegrees = absoluteTargetAngleDegrees < 0 ? absoluteTargetAngleDegrees + 360 : absoluteTargetAngleDegrees;
             double relativePlayerAngle = absoluteTargetAngleDegrees  - estimatedPosition.absoluteDirection;
             getPlayer().turn(relativePlayerAngle);
-            getPlayer().dash(dashValueSlow());
+            getPlayer().dash(dashSpeed);
         }
 
     }

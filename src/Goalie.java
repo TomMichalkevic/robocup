@@ -80,15 +80,22 @@ public class Goalie extends Player {
         }
     }
 
+
+    /**
+     * If the ball isn't visible just do what we would do if it was far away
+     */
     protected void ballNotVisibleAction()
     {
         ballIsFarAction();
     }
 
+    /**
+     * Move to the center of the goal
+     */
     protected void moveToHoldingPosition()
     {
         //Goal stays in position regardless of aggression
-        moveToPosition(-50, 0);
+        moveToPosition(-50, 0, dashValueSlow());
     }
 
 

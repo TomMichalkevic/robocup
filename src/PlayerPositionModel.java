@@ -309,6 +309,27 @@ public class PlayerPositionModel {
 
 
     /**
+     * Check if the player is in between the goal and the ball
+     * @param player the player to test (OUR TEAM)
+     * @return if the player is sufficiently in between the ball and the goal
+     */
+    protected boolean inBetweenOurGoalAndBall(Player player)
+    {
+        EstimatedPosition ballPos = estimatedBallPosition();
+        EstimatedPosition playerPos = estimatedPlayerPosition(player.getPlayer().getNumber());
+        if (ballPos != null && playerPos != null) {
+            Point A = new Point(-(Player.BOUNDARY_WIDTH/2 - Player.DISTANCE_PITCH_EDGE_TO_BOUNDARY), 0);
+            Point B = ballPos.centerAndDir();
+            Point P = playerPos.centerAndDir();
+
+            double normalLength = Math.sqrt((B.x-A.x)*(B.x-A.x)+(B.y-A.y)*(B.y-A.y));
+            return Math.abs((P.x-A.x)*(B.y-A.y)-(P.y-A.y)*(B.x-A.x))/normalLength < Player.INTERCEPTION_MAX_DISTANCE;
+        }
+        return false;
+    }
+
+
+    /**
      * @return A point one third of the way from our goal to the ball
      */
     public Point pointBetweenBallAndOurGoal()
@@ -599,6 +620,11 @@ class EstimatedPosition {
     public double distanceToEstimatedPosition(EstimatedPosition estimatedPosition)
     {
         return Math.sqrt(Math.pow(x-estimatedPosition.x,2) + Math.pow(y-estimatedPosition.y,2));
+    }
+
+    public DirectedPoint centerAndDir()
+    {
+        return new DirectedPoint(x,y,absoluteDirection);
     }
 }
 
