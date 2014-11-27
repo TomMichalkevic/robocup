@@ -17,7 +17,6 @@ public class PlayerPositionModel {
     private HashMap<Integer, ArrayList<ObjectAbsolutePosition>> absolute;
     private HashMap<Integer, EstimatedPosition> estimatedPositions;
 
-
     /**
      * Init the player position model. absolutes requires an array list for each player for observed positions
      */
@@ -78,8 +77,8 @@ public class PlayerPositionModel {
      */
     public void addPlayer(Player p, boolean ownTeam, int number, double distance, double direction)
     {
-        int relation = ownTeam ? ObjectRelativePosition.RELATION_OWN_TEAM : ObjectRelativePosition.RELATION_OTHER_TEAM;
-        ObjectRelativePosition o = new ObjectRelativePosition(relation, p.getPlayer().getNumber(), number, distance, direction);
+        int team = ownTeam ? 1 : -1;
+        ObjectRelativePosition o = new ObjectRelativePosition(p.getPlayer().getNumber(), number * team, distance, direction);
         mapping.put(o.hashCode(),o);
     }
 
@@ -92,13 +91,14 @@ public class PlayerPositionModel {
      */
     public void addBall(Player p, double distance, double direction)
     {
-        ObjectRelativePosition o = new ObjectRelativePosition(ObjectRelativePosition.RELATION_BALL, p.getPlayer().getNumber(), 0, direction, distance);
+        ObjectRelativePosition o = new ObjectRelativePosition(p.getPlayer().getNumber(), 0, direction, distance);
         mapping.put(o.hashCode(),o);
     }
 
 
     /**
      * Filter the list of estimated positions with the given parameters.
+     *
      * @param p Player (controller player abstract subclass)
      * @param type 0 = all, 1 = own team, 2 = other team, 3 = ball
      * @param xGreaterThan absolute x position should be greater than (pitch axis) Use -Player.LARGE_DISTANCE for all
@@ -107,9 +107,10 @@ public class PlayerPositionModel {
      * @param yLessThan absolute y position should be less than (pitch axis) Use Player.LARGE_DISTANCE for all
      * @param maxDistance the maximum distance from the given player use Player.LARGE_DISTANCE for all
      * @param minDistance the minimum distance from the given player use 0 for all
+     * @param sort what to sort the filtered objects by
      * @return A filtered array list of positions
      */
-    public ArrayList<EstimatedPosition> filterObjects(Player p, int type, double xGreaterThan, double yGreaterThan, double xLessThan, double yLessThan, double maxDistance, double minDistance)
+    public ArrayList<EstimatedPosition> filterObjects(Player p, int type, double xGreaterThan, double yGreaterThan, double xLessThan, double yLessThan, double maxDistance, double minDistance, String sort)
     {
         ArrayList<EstimatedPosition> filteredObjects = new ArrayList<EstimatedPosition>();
         for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
@@ -122,11 +123,17 @@ public class PlayerPositionModel {
                         EstimatedPosition player = estimatedPlayerPosition(playerNumber);
                         double distance = Math.sqrt(Math.pow(position.x - player.x,2) + Math.pow(position.y - player.y, 2));
                         if (distance < maxDistance && distance > minDistance) {
+                            if (sort == "distance") {
+                                position.sortValue = distance;
+                            }
                             filteredObjects.add(position);
                         }
                     }
                 }
             }
+        }
+        if (sort != "") {
+            Collections.sort(filteredObjects, new EstimatedPositionComparator());
         }
         return filteredObjects;
     }
@@ -166,12 +173,22 @@ public class PlayerPositionModel {
                 estimatedPosition.x = pos.x - Player.BOUNDARY_WIDTH/2;
                 estimatedPosition.y = (pos.y - Player.BOUNDARY_HEIGHT/2) * -1; //Correction for reversed lines
                 estimatedPosition.absoluteDirection = Math.toDegrees(pos.direction) % 360;
-                //Correction for java's funky handling of negative modulus
-                estimatedPosition.absoluteDirection = estimatedPosition.absoluteDirection < 0 ? estimatedPosition.absoluteDirection+360 : estimatedPosition.absoluteDirection;
+
+                estimatedPosition.absoluteDirection = realMod(estimatedPosition.absoluteDirection);
                 estimatedPositions.put(estimatedPosition.identifier, estimatedPosition);
             }
         }
         findTheBall();
+    }
+
+    /**
+     * Correction for java's funky handling of negative modulus
+     * @param degrees
+     * @return
+     */
+    private double realMod(double degrees)
+    {
+        return degrees < 0 ? degrees+360 : degrees;
     }
 
 
@@ -186,6 +203,49 @@ public class PlayerPositionModel {
     }
 
 
+
+    public double turnDirectionForOppositeDirectionFrom(Player player, EstimatedPosition estimatedPosition)
+    {
+        EstimatedPosition playerEstimatedPosition = estimatedPlayerPosition(player.getPlayer().getNumber());
+        int hashCode = ObjectRelativePosition.codeFor(player.getPlayer().getNumber(), estimatedPosition.identifier);
+        ObjectRelativePosition relation = mapping.get(hashCode);
+
+
+        if (relation != null) {
+            double turn = 180 - Math.abs(relation.direction);
+            return relation.direction < 0 ? turn : -turn;
+        } else {
+            Triangle t = new Triangle();
+            t.sideA = Math.abs(playerEstimatedPosition.y - estimatedPosition.y);
+            t.sideB = Math.abs(playerEstimatedPosition.x - estimatedPosition.x);
+            t.sideCFromRightAngledTriangle();
+            t.calculate();
+            double absoluteOppositeDir = 0;
+            if (playerEstimatedPosition.x > estimatedPosition.x &&
+                playerEstimatedPosition.y < estimatedPosition.y) { //Case 1
+                absoluteOppositeDir =  t.angleA + 180;
+            } else if (playerEstimatedPosition.x < estimatedPosition.x &&
+                       playerEstimatedPosition.y < estimatedPosition.y) { //Case 2
+                absoluteOppositeDir =  (180 - t.angleA) + 180;
+            } else if (playerEstimatedPosition.x < estimatedPosition.x &&
+                        playerEstimatedPosition.y > estimatedPosition.y) { //Case 3
+                absoluteOppositeDir =  t.angleA;
+            } else if (playerEstimatedPosition.x > estimatedPosition.x &&
+                       playerEstimatedPosition.y > estimatedPosition.y) { //Case 4
+                absoluteOppositeDir =  (360 - t.angleA) - 180;
+            }
+            double a = playerEstimatedPosition.absoluteDirection - absoluteOppositeDir;
+
+            if (a < 0) {
+                a = realMod(a);
+            }
+            double right = 360 - a;
+            return right < a ? right : -a;
+
+        }
+    }
+
+
     /**
      * ### Must be called after we have player positions ###
      *
@@ -197,7 +257,7 @@ public class PlayerPositionModel {
     {
         ArrayList<Point> ballPoints = new ArrayList<Point>();
         for (Map.Entry<Integer, EstimatedPosition> entry : estimatedPositions.entrySet()) {
-            ObjectRelativePosition position = mapping.get(ObjectRelativePosition.codeFor(entry.getKey(), 0, ObjectRelativePosition.RELATION_BALL));
+            ObjectRelativePosition position = mapping.get(ObjectRelativePosition.codeFor(entry.getKey(), 0));
             if (position != null){
                 EstimatedPosition observer = entry.getValue();
                 double absoluteBallDirectionFromObserver = observer.absoluteDirection + position.direction;
@@ -368,22 +428,17 @@ class ObjectAbsolutePosition {
 }
 
 class ObjectRelativePosition {
-    
-    public static final int RELATION_OWN_TEAM = 1,
-            RELATION_OTHER_TEAM = 2,
-            RELATION_BALL = 3;
+
     
     
     public int fromIdentifier;
-    public int relation;
     public int toIdentifier;
     
     public double direction;
     public double distance;
     
-    public ObjectRelativePosition(int relation, int fromIdentifier, int toIdentifier, double direction, double distance)
+    public ObjectRelativePosition(int fromIdentifier, int toIdentifier, double direction, double distance)
     {
-        this.relation = relation;
         this.fromIdentifier = fromIdentifier;
         this.toIdentifier = toIdentifier;
         this.direction = direction;
@@ -392,12 +447,12 @@ class ObjectRelativePosition {
     
     public int hashCode()
     {
-        return fromIdentifier * 1000 + toIdentifier * 10 + relation;
+        return fromIdentifier * 1000 + toIdentifier;
     }
 
-    public static int codeFor(int fromIdentifier, int toIdentifier, int relation)
+    public static int codeFor(int fromIdentifier, int toIdentifier)
     {
-        return fromIdentifier * 1000 + toIdentifier * 10 + relation;
+        return fromIdentifier * 1000 + toIdentifier;
     }
     
 }
@@ -437,6 +492,13 @@ class DirectedPoint extends Point {
     }
 }
 
+class EstimatedPositionComparator implements Comparator<EstimatedPosition> {
+    @Override
+    public int compare(EstimatedPosition o1, EstimatedPosition o2) {
+        return Double.compare(o1.sortValue, o2.sortValue);
+    }
+}
+
 /**
  * A representation of a dynamic objects position
  *
@@ -450,6 +512,7 @@ class EstimatedPosition {
     public double x;
     public double y;
     public double absoluteDirection;
+    public double sortValue;
 
     EstimatedPosition(int identifier)
     {

@@ -58,8 +58,23 @@ public class Midfielder extends Player {
 
     protected void ballIsVeryCloseAction()
     {
-        getPlayer().turn(directionToBall);
-        getPlayer().dash(dashValueFast());
+       int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
+
+        if (playersCloseToBall == 0) {
+            getPlayer().turn(directionToBall);
+            getPlayer().dash(dashValueVeryFast());
+        } else if (playersCloseToBall == 1 || playersCloseToBall < 0) {
+            getPlayer().turn(directionToBall);
+            getPlayer().dash(dashValueFast());
+        } else { //Track towards goal
+            if (numberOfOurPlayersWithRangeOfMe(PLAYER_CROWDING_RANGE) > 0) {
+
+                getPlayer().turn(oppositeDirectionTo(closestTeamMember()));
+                getPlayer().dash(dashValueSlow());
+            } else {
+                // Do nothing...?
+            }
+        }
     }
 
     protected void ballIsCloseAction()

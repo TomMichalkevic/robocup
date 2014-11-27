@@ -2,6 +2,7 @@ import com.github.robocup_atan.atan.model.ActionsPlayer;
 import com.github.robocup_atan.atan.model.ControllerPlayer;
 import com.github.robocup_atan.atan.model.enums.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -23,6 +24,8 @@ public abstract class Player implements ControllerPlayer {
             LARGE_DISTANCE = 1000, // Use as a constant for large values when searching or viewing
             PENALTY_DISTANCE_FROM_CENTER = 43,
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5,
+            BALL_CROWDING_RANGE = 5,
+            PLAYER_CROWDING_RANGE = 3,
             HOLDING_POSITION_RADIUS = 3; //Hard to work out EXACTLY where they are so allow some flexibility in reaching the position
     /**
      * Define a constant for each player position for readability.
@@ -69,7 +72,7 @@ public abstract class Player implements ControllerPlayer {
      * Also keep track off score and elapsed ticks (once for all players)
      */
     private static int
-            Aggression = 50,
+            Aggression = 65,
             GoalsOwn = 0,
             GoalsOther = 0,
             TickCount = 0;
@@ -143,11 +146,17 @@ public abstract class Player implements ControllerPlayer {
         canSeeOwnPenalty = false;
         canSeeFieldEnd = false;
         ownGoalTurn = 0.0;
+        // At the start of a tick clear the positional model
+        // This should only happen once for the whole team and only one player is player 1 so it's an easy test
         if (getPlayer().getNumber() == 1) {
             playerPositionModel.clearModel();
             TickCount++;
+
+            if (TickCount == 2999) {
+                Object h = stats;
+            }
             if ((halfProgress() * 100) % PROGRESS_AGGRESSION_FREQUENCY == 0){
-                setAggression(getAggression() + PROGRESS_AGGRESSION_CHANGE); //Make this faser if losing?
+                setAggression(getAggression() + PROGRESS_AGGRESSION_CHANGE); //Make this faster if losing?
             }
         }
 
@@ -205,7 +214,7 @@ public abstract class Player implements ControllerPlayer {
     protected boolean areNoCloseForwardPlayers()
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 0, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 5, 0).size() == 0;
+            return playerPositionModel.filterObjects(this, 0, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 5, 0, "").size() == 0;
         }
         return false;
     }
@@ -216,7 +225,7 @@ public abstract class Player implements ControllerPlayer {
     protected boolean isFowardOwnPlayer()
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 1, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 5, 0).size() > 0;
+            return playerPositionModel.filterObjects(this, 1, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 5, 0, "").size() > 0;
         }
         return false;
     }
@@ -228,7 +237,7 @@ public abstract class Player implements ControllerPlayer {
     protected boolean isBallOtherGoalSideOfPlayer()
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 3, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0).size() > 0;
+            return playerPositionModel.filterObjects(this, 3, playerPosition().x, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0, "").size() > 0;
         }
         return false;
     }
@@ -240,7 +249,7 @@ public abstract class Player implements ControllerPlayer {
     protected boolean isBallOwnGoalSideOfPlayer()
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, playerPosition().x, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0).size() > 0;
+            return playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, playerPosition().x, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, 0, "").size() > 0;
         }
         return false;
     }
@@ -254,6 +263,39 @@ public abstract class Player implements ControllerPlayer {
         return TickCount / TOTAL_HALF_TICKS;
     }
 
+
+    protected int numberOfOurPlayersWithRangeOfBall(double range)
+    {
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, range, 0, "").size();
+        }
+        return -1;
+    }
+
+    protected int numberOfOurPlayersWithRangeOfMe(double range)
+    {
+        if (playerPosition() != null) {
+            return playerPositionModel.filterObjects(this, 1, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, range, 0, "").size();
+        }
+        return -1;
+    }
+
+    protected double oppositeDirectionTo(EstimatedPosition position)
+    {
+        return playerPositionModel.turnDirectionForOppositeDirectionFrom(this, position);
+    }
+
+
+    protected EstimatedPosition closestTeamMember()
+    {
+        if (playerPosition() != null) {
+            ArrayList<EstimatedPosition> filteredTeamMates = playerPositionModel.filterObjects(this, 1, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.PLAYER_CROWDING_RANGE, 0, "distance");
+            if (filteredTeamMates.size() > 0) {
+                return filteredTeamMates.get(0);
+            }
+        }
+        return null;
+    }
 
     /**
      * Move the player towards the given position if possible
@@ -546,6 +588,7 @@ public abstract class Player implements ControllerPlayer {
     @Override
     public void infoHearPlayer(double direction, String string) {}
 
+    static HashMap<Integer, HashMap<String, ArrayList<Double>>> stats = new HashMap<Integer, HashMap<String, ArrayList<Double>>>();
     /** {@inheritDoc} */
     @Override
     public void infoSenseBody(ViewQuality viewQuality, ViewAngle viewAngle, double stamina, double unknown,
@@ -553,6 +596,23 @@ public abstract class Player implements ControllerPlayer {
                               int kickCount, int dashCount, int turnCount, int sayCount, int turnNeckCount,
                               int catchCount, int moveCount, int changeViewCount)
     {
+        HashMap<String, ArrayList<Double>> stat = stats.get(getPlayer().getNumber());
+        if (stat == null) {
+            stat = new HashMap<String, ArrayList<Double>>();
+            stat.put("stamina", new ArrayList<Double>());
+            stat.put("unknown", new ArrayList<Double>());
+            stat.put("effort", new ArrayList<Double>());
+            stat.put("speedAmount", new ArrayList<Double>());
+            stat.put("speedDirection", new ArrayList<Double>());
+            stat.put("headAngle", new ArrayList<Double>());
+            stats.put(getPlayer().getNumber(), stat);
+        }
+        stat.get("stamina").add(stamina);
+        stat.get("unknown").add(unknown);
+        stat.get("effort").add(effort);
+        stat.get("speedAmount").add(speedAmount);
+        stat.get("speedDirection").add(speedDirection);
+        stat.get("headAngle").add(headAngle);
         this.playerRemainingStamina = stamina;
     }
 
@@ -671,7 +731,7 @@ public abstract class Player implements ControllerPlayer {
                 break;
         }
         int flagY = multiple * ((BOUNDARY_HEIGHT -2*DISTANCE_PITCH_EDGE_TO_BOUNDARY)/2);
-        playerPositionModel.addPosition(this, flagX, flagY, direction, distance); //TODO distance could be negative
+        playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
 
@@ -733,19 +793,16 @@ public abstract class Player implements ControllerPlayer {
     public void infoSeeFlagLeft(Flag flag, double distance, double direction, double distChange, double dirChange,
                                 double bodyFacingDirection, double headFacingDirection)
     {
-        // CENTER,
-        // RIGHT, RIGHT_10, RIGHT_20, RIGHT_30;
-        // LEFT, LEFT_10, LEFT_20, LEFT_30,
-        // OTHER_10, OTHER_20, OTHER_30, OTHER_40, OTHER_50,
-        // OWN_10, OWN_20, OWN_30, OWN_40, OWN_50,
-
-
-
         int flagX = flagToX(flag);
         int flagY = -BOUNDARY_HEIGHT /2;
         playerPositionModel.addPosition(this, flagX, flagY, direction, distance);
     }
 
+
+    /**
+     * @param flag the flag enum to get the value for
+     * @return X co ord for the flag
+     */
     private int flagToX(Flag flag)
     {
         int x = 0;
@@ -789,6 +846,11 @@ public abstract class Player implements ControllerPlayer {
 
     }
 
+
+    /**
+     * @param flag the flag enum to get the value for
+     * @return Y co ord for the flag
+     */
     private int flagToY(Flag flag)
     {
         int y = 0;
