@@ -597,7 +597,7 @@ public abstract class Player implements ControllerPlayer {
                 this.getPlayer().move(-20, 20);
                 break;
             case LEFT_WING :
-                this.getPlayer().move(0, -20);
+                this.getPlayer().move(-3, -20);
                 break;
             case CENTER_LEFT_MIDFIELD :
                 this.getPlayer().move(-5, -8);
@@ -606,13 +606,13 @@ public abstract class Player implements ControllerPlayer {
                 this.getPlayer().move(-5, 8);
                 break;
             case RIGHT_WING :
-                this.getPlayer().move(0, 20);
+                this.getPlayer().move(-3, 20);
                 break;
             case CENTER_LEFT_FORWARD :
-                this.getPlayer().move(0, -1);
+                this.getPlayer().move(-1, -1);
                 break;
             case CENTER_RIGHT_FORWARD :
-                this.getPlayer().move(0, 1);
+                this.getPlayer().move(-1, 1);
         }
 
     }
@@ -740,6 +740,10 @@ public abstract class Player implements ControllerPlayer {
     @Override
     public void infoHearPlayer(double direction, String string) {}
 
+
+    /**
+     * Add some tracking so we can graph how stamina ect progress over the match
+     */
     static HashMap<Integer, HashMap<String, ArrayList<Double>>> stats = new HashMap<Integer, HashMap<String, ArrayList<Double>>>();
     /** {@inheritDoc} */
     @Override
