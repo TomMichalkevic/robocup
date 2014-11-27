@@ -202,8 +202,23 @@ public class PlayerPositionModel {
         return estimatedPositions.get(playerNumber);
     }
 
+    /**
+     * Use this method to get the best guess position of the ball
+     * @return an estimated position for the ball
+     */
+    public EstimatedPosition estimatedBallPosition()
+    {
+        return estimatedPositions.get(0);
+    }
 
 
+    /**
+     * Find the direction to turn so that the player is facing away form the given object.
+     * Make sure we use the shortest distance left or right
+     * @param player the player that will turn
+     * @param estimatedPosition the object that the player should turn away from
+     * @return the direction the player should turn
+     */
     public double turnDirectionForOppositeDirectionFrom(Player player, EstimatedPosition estimatedPosition)
     {
         EstimatedPosition playerEstimatedPosition = estimatedPlayerPosition(player.getPlayer().getNumber());
@@ -233,6 +248,53 @@ public class PlayerPositionModel {
             } else if (playerEstimatedPosition.x > estimatedPosition.x &&
                        playerEstimatedPosition.y > estimatedPosition.y) { //Case 4
                 absoluteOppositeDir =  (360 - t.angleA) - 180;
+            }
+            double a = playerEstimatedPosition.absoluteDirection - absoluteOppositeDir;
+
+            if (a < 0) {
+                a = realMod(a);
+            }
+            double right = 360 - a;
+            return right < a ? right : -a;
+
+        }
+    }
+
+
+    /**
+     * Find the direction to turn so that the player is facing towards the given object.
+     * Make sure we use the shortest distance left or right
+     * @param player the player that will turn
+     * @param estimatedPosition the object that the player should turn towards
+     * @return the direction the player should turn
+     */
+    public double turnDirectionToFacePosition(Player player, EstimatedPosition estimatedPosition)
+    {
+        EstimatedPosition playerEstimatedPosition = estimatedPlayerPosition(player.getPlayer().getNumber());
+        int hashCode = ObjectRelativePosition.codeFor(player.getPlayer().getNumber(), estimatedPosition.identifier);
+        ObjectRelativePosition relation = mapping.get(hashCode);
+
+        if (relation != null) {
+            return relation.direction;
+        } else {
+            Triangle t = new Triangle();
+            t.sideA = Math.abs(playerEstimatedPosition.y - estimatedPosition.y);
+            t.sideB = Math.abs(playerEstimatedPosition.x - estimatedPosition.x);
+            t.sideCFromRightAngledTriangle();
+            t.calculate();
+            double absoluteOppositeDir = 0;
+            if (playerEstimatedPosition.x > estimatedPosition.x &&
+                    playerEstimatedPosition.y < estimatedPosition.y) { //Case 1
+                absoluteOppositeDir =  t.angleA;
+            } else if (playerEstimatedPosition.x < estimatedPosition.x &&
+                    playerEstimatedPosition.y < estimatedPosition.y) { //Case 2
+                absoluteOppositeDir =  180 - t.angleA;
+            } else if (playerEstimatedPosition.x < estimatedPosition.x &&
+                    playerEstimatedPosition.y > estimatedPosition.y) { //Case 3
+                absoluteOppositeDir =  180 + t.angleA;
+            } else if (playerEstimatedPosition.x > estimatedPosition.x &&
+                    playerEstimatedPosition.y > estimatedPosition.y) { //Case 4
+                absoluteOppositeDir = 360 - t.angleA;
             }
             double a = playerEstimatedPosition.absoluteDirection - absoluteOppositeDir;
 
@@ -521,6 +583,11 @@ class EstimatedPosition {
         x = 0;
         y = 0;
         this.identifier = identifier;
+    }
+
+    public double distanceToEstimatedPosition(EstimatedPosition estimatedPosition)
+    {
+        return Math.sqrt(Math.pow(x-estimatedPosition.x,2) + Math.pow(y-estimatedPosition.y,2));
     }
 }
 

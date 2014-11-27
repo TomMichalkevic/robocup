@@ -52,7 +52,7 @@ public class Striker extends Player {
 
     protected void ballIsVeryCloseAction()
     {
-        getPlayer().turn(directionToBall);
+        getPlayer().turn(bestDirectionToBall());
         if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
             getPlayer().dash(dashValueFast());
         } else {
@@ -63,7 +63,7 @@ public class Striker extends Player {
     protected void ballIsCloseAction()
     {
         if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueVeryFast());
         } else {
             moveToHoldingPosition();
@@ -73,7 +73,7 @@ public class Striker extends Player {
     protected void ballIsFarAction()
     {
         if (isBallOtherGoalSideOfPlayer()) { //Don't burn striker stamina tracking back
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueFast());
         } else {
             moveToHoldingPosition();

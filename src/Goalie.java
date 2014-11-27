@@ -19,7 +19,7 @@ public class Goalie extends Player {
     protected void playerHasBallAction()
     {
         if(canSeeOwnGoal || canSeeOwnPenalty) {
-            this.getPlayer().catchBall(directionToBall);
+            this.getPlayer().catchBall(bestDirectionToBall());
         }
         if(canSeeOwnGoal) {
             this.getPlayer().kick(60, 135);
@@ -32,7 +32,7 @@ public class Goalie extends Player {
     {
         if(canSeeOwnGoal || canSeeOwnPenalty) {
             needsToRetreat = true;
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueFast());
         }
     }
@@ -41,7 +41,7 @@ public class Goalie extends Player {
     {
         if(canSeeOwnGoal || canSeeOwnPenalty) {
             needsToRetreat = true;
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueVeryFast());
          }
     }

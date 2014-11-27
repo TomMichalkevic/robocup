@@ -52,7 +52,7 @@ public class Defender extends Player {
 
     protected void ballIsVeryCloseAction()
     {
-        getPlayer().turn(directionToBall);
+        getPlayer().turn(bestDirectionToBall());
         if (isBallOwnGoalSideOfPlayer()) { //Don't burn defender stamina attacking back
             getPlayer().dash(dashValueFast());
         } else {
@@ -63,7 +63,7 @@ public class Defender extends Player {
     protected void ballIsCloseAction()
     {
         if (isBallOwnGoalSideOfPlayer()) { //Don't burn defender stamina attacking back
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueVeryFast());
         } else {
             moveToHoldingPosition();
@@ -73,7 +73,7 @@ public class Defender extends Player {
     protected void ballIsFarAction()
     {
         if (isBallOwnGoalSideOfPlayer()) { //Don't burn defender stamina attacking back
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueFast());
         } else {
             moveToHoldingPosition();

@@ -61,10 +61,10 @@ public class Midfielder extends Player {
        int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
 
         if (playersCloseToBall == 0) {
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueVeryFast());
         } else if (playersCloseToBall == 1 || playersCloseToBall < 0) {
-            getPlayer().turn(directionToBall);
+            getPlayer().turn(bestDirectionToBall());
             getPlayer().dash(dashValueFast());
         } else { //Track towards goal
             if (numberOfOurPlayersWithRangeOfMe(PLAYER_CROWDING_RANGE) > 0) {
@@ -73,20 +73,51 @@ public class Midfielder extends Player {
                 getPlayer().dash(dashValueSlow());
             } else {
                 // Do nothing...?
+                lookAround();
             }
         }
     }
 
+
     protected void ballIsCloseAction()
     {
-        getPlayer().turn(directionToBall);
-        getPlayer().dash(dashValueVeryFast());
+        int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
+
+        if (playersCloseToBall < 3) {
+            getPlayer().turn(bestDirectionToBall());
+            getPlayer().dash(dashValueVeryFast());
+        }  else { //Track towards goal
+            if (numberOfOurPlayersWithRangeOfMe(PLAYER_CROWDING_RANGE) > 0) {
+
+                getPlayer().turn(oppositeDirectionTo(closestTeamMember()));
+                getPlayer().dash(dashValueSlow());
+            } else {
+                // Do nothing...?
+                lookAround();
+            }
+        }
     }
 
     protected void ballIsFarAction()
     {
-        getPlayer().turn(directionToBall);
-        getPlayer().dash(dashValueSlow());
+        int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
+
+        if (playersCloseToBall < 2) {
+            getPlayer().turn(bestDirectionToBall());
+            getPlayer().dash(dashValueFast());
+        } else if (playersCloseToBall == 2 || playersCloseToBall < 0) {
+            getPlayer().turn(bestDirectionToBall());
+            getPlayer().dash(dashValueSlow());
+        }  else { //Track towards goal
+            if (numberOfOurPlayersWithRangeOfMe(PLAYER_CROWDING_RANGE) > 0) {
+
+                getPlayer().turn(oppositeDirectionTo(closestTeamMember()));
+                getPlayer().dash(dashValueSlow());
+            } else {
+                // Do nothing...?
+                lookAround();
+            }
+        }
     }
 
 

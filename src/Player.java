@@ -136,10 +136,10 @@ public abstract class Player implements ControllerPlayer {
     /** {@inheritDoc} */
     @Override
     public void preInfo() {
-        distanceToBall = 1000;
-        distanceOwnGoal = 1000;
+        distanceToBall = Player.LARGE_DISTANCE;
+        distanceOwnGoal = Player.LARGE_DISTANCE;
         directionOwnGoal = 0;
-        distanceOtherGoal = 1000;
+        distanceOtherGoal = Player.LARGE_DISTANCE;
         directionOtherGoal = 0;
         canSeeOwnGoal = false;
         canSeeGoalLeft = false;
@@ -168,15 +168,13 @@ public abstract class Player implements ControllerPlayer {
     public void postInfo()
     {
         playerPositionModel.estimatePositions();
-//        moveToHoldingPosition();;
-
-        if (distanceToBall <= Player.BALL_WITHIN_REACH) {
+        if (bestDistanceToBall() <= Player.BALL_WITHIN_REACH) {
             playerHasBallAction();
-        }else if (distanceToBall <= Player.BALL_VERY_CLOSE) {
+        }else if (bestDistanceToBall() <= Player.BALL_VERY_CLOSE) {
             ballIsVeryCloseAction();
-        }else if (distanceToBall <= Player.BALL_CLOSE) {
+        }else if (bestDistanceToBall() <= Player.BALL_CLOSE) {
             ballIsCloseAction();
-        }else if (distanceToBall < Player.LARGE_DISTANCE){
+        }else if (bestDistanceToBall() < Player.LARGE_DISTANCE){
             ballIsFarAction();
         }else {
             ballNotVisibleAction();
@@ -270,6 +268,40 @@ public abstract class Player implements ControllerPlayer {
         return directionOtherGoal;
     }
 
+    /**
+     * If this player has direct sight of the ball use that, otherwise calculate it
+     * @return the distance to the ball
+     */
+    protected double bestDistanceToBall()
+    {
+        if (distanceToBall < Player.LARGE_DISTANCE) {
+            return distanceToBall;
+        }
+        EstimatedPosition ballPosition = playerPositionModel.estimatedBallPosition();
+        EstimatedPosition playerPosition = playerPosition();
+        if (ballPosition != null && playerPosition != null) {
+            return playerPosition.distanceToEstimatedPosition(ballPosition);
+        }
+        return Player.LARGE_DISTANCE;
+    }
+
+
+    /**
+     * If this player has direct sight of the ball use that, otherwise calculate it
+     * @return the direction to the ball
+     */
+    protected double bestDirectionToBall()
+    {
+        if (directionToBall != 0) {
+            return directionToBall;
+        }
+        EstimatedPosition ballPosition = playerPositionModel.estimatedBallPosition();
+        EstimatedPosition playerPosition = playerPosition();
+        if (ballPosition != null && playerPosition != null) {
+            return playerPositionModel.turnDirectionToFacePosition(this, ballPosition);
+        }
+        return 0;
+    }
 
     /**
      * @return is there any players close in front
