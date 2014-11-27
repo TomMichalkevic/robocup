@@ -65,7 +65,7 @@ public class Striker extends Player {
         int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
         if (playersCloseToBall == 0 && isBallOtherGoalSideOfPlayer()) {
             getPlayer().turn(bestDirectionToBall());
-            getPlayer().dash(dashValueVeryFast());
+            getPlayer().dash(dashValueMedium());
         } else { //Track towards goal
             trackAttacking();
         }

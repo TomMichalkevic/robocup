@@ -66,7 +66,7 @@ public class Defender extends Player {
         int playersCloseToBall = numberOfOurPlayersWithRangeOfBall(BALL_CROWDING_RANGE);
         if (playersCloseToBall < 1) {
             getPlayer().turn(bestDirectionToBall());
-            getPlayer().dash(defenderDashSpeed());
+            getPlayer().dash(dashValueMedium());
         } else { //Track towards goal
             trackDefending();
         }

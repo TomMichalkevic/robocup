@@ -25,8 +25,8 @@ public abstract class Player implements ControllerPlayer {
             PENALTY_DISTANCE_FROM_CENTER = 43,
             DISTANCE_PITCH_EDGE_TO_BOUNDARY = 5,
             INTERCEPTION_MAX_DISTANCE = 3,
-            BALL_CROWDING_RANGE = 5,
-            PLAYER_CROWDING_RANGE = 3,
+            BALL_CROWDING_RANGE = 6,
+            PLAYER_CROWDING_RANGE = 4,
             BALL_TRACKING_DISTANCE = 10, //Keep this range from ball if players are crowding it
             ATTACK_COUNT_THRESHOLD = 4,
             HOLDING_POSITION_RADIUS = 3; //Hard to work out EXACTLY where they are so allow some flexibility in reaching the position
@@ -409,7 +409,11 @@ public abstract class Player implements ControllerPlayer {
     protected int numberOfOurPlayersWithRangeOfBall(double range)
     {
         if (playerPosition() != null) {
-            return playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, range, 0, "").size();
+            int c = playerPositionModel.filterObjects(this, 3, -Player.LARGE_DISTANCE, -Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, Player.LARGE_DISTANCE, range, 0, "").size();
+            if (c > 0){
+                int k = 1;
+            }
+            return c;
         }
         return -1;
     }
@@ -637,6 +641,17 @@ public abstract class Player implements ControllerPlayer {
         int initialPower = getAggression() + 10;
         return staminaBoost(initialPower);
     }
+
+    /**
+     * The Dash speed used to get up to a very close ball
+     * @return
+     */
+    protected int dashValueMedium()
+    {
+        int initialPower = getAggression() + 10;
+        return staminaBoost(initialPower);
+    }
+
 
     /**
      * Dash value should be faster if more stamina is left and the aggression is higher

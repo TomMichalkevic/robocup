@@ -75,10 +75,10 @@ public class Midfielder extends Player {
 
         if (playersCloseToBall == 0) {
             getPlayer().turn(bestDirectionToBall());
-            getPlayer().dash(dashValueVeryFast());
+            getPlayer().dash(dashValueMedium());
         } else if (playersCloseToBall == 1 || playersCloseToBall < 0) {
             getPlayer().turn(bestDirectionToBall());
-            getPlayer().dash(dashValueFast());
+            getPlayer().dash(dashValueSlow());
         } else { //Track towards goal
             trackBall();
         }
